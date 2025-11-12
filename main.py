@@ -447,7 +447,7 @@ def get_initial_data():
     }
 
 @cli.with_appcontext
-@app.command('init-db')
+@app.cli.command('init-db')
 @click.argument('seed', default=False, type=click.BOOL)
 def init_db_command(seed):
     """データベーステーブルを再作成し、マスタデータを挿入する (ORM対応)"""
@@ -867,3 +867,4 @@ if __name__ == "__main__":
         
     # 【重要】テンプレートファイル（*.html）は、このPythonファイルと同じ階層にある 'templates' フォルダに配置してください
     app.run(debug=True, host='0.0.0.0', port=5000)
+
