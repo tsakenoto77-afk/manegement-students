@@ -1,4 +1,4 @@
-﻿# main.py (Flask-SQLAlchemy ORM 統合版)
+# main.py (Flask-SQLAlchemy ORM 統合版)
 
 import os
 from datetime import datetime, date, timedelta, time
@@ -447,8 +447,9 @@ def get_initial_data():
     }
 
 @cli.with_appcontext
-@click.command('init-db')
-def init_db_command():
+@app.command('init-db')
+@click.argument('seed', default=False, type=click.BOOL)
+def init_db_command(seed):
     """データベーステーブルを再作成し、マスタデータを挿入する (ORM対応)"""
     try:
         # 1. 既存のデータをすべて削除し、テーブルを作成
@@ -501,8 +502,8 @@ def init_db_command():
             db.session.add(授業計画(日付=date_obj, 期=term, 授業曜日=weekday))
         
         db.session.commit()
-        print("? マスタデータと初期データを挿入しました。")
-        
+        # print("? マスタデータと初期データを挿入しました。")
+        click.echo('データベースの初期化とマスタデータの挿入が完了しました。')
     except Exception as e:
         print(f"? データベース初期化エラー: {e}")
         db.session.rollback()
