@@ -1,0 +1,46 @@
+﻿{% extends "base.html" %}
+
+{% block title %}週時間割{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">{{ title }}</h1>
+
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i>この時間割はデータベースのデータに基づいています。（2025年度 3期 電子情報学科に固定表示）
+</div>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped text-center align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th style="width: 100px;">時限</th>
+                {% for weekday in weekdays %}
+                <th>{{ weekday.曜日名 }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for time_slot in time_slots %}
+            <tr>
+                <td class="table-secondary">
+                    <strong>{{ time_slot.時限 }}</strong><br>
+                    <small>{{ time_slot.開始時刻 | slice(0, 5) }} - {{ time_slot.終了時刻 | slice(0, 5) }}</small>
+                </td>
+                {% for weekday in weekdays %}
+                    {% set lesson = timetable_matrix.get((weekday.曜日ID, time_slot.時限)) %}
+                    {% if lesson %}
+                    <td class="bg-light">
+                        <strong class="text-primary">{{ lesson.授業科目名 }}</strong><br>
+                        <small>教室: {{ lesson.教室名 }}</small><br>
+                        {% if lesson.備考 %}<small class="text-muted">({{ lesson.備考 }})</small>{% endif %}
+                    </td>
+                    {% else %}
+                    <td class="text-muted"><small>?</small></td>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

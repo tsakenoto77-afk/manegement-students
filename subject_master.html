@@ -1,0 +1,28 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+<h2 class="section-title"><i class="fas fa-book-open me-2"></i>授業科目マスタ</h2>
+<div class="card p-3 table-responsive-custom mb-5">
+{% if subjects %}
+<table class="table table-bordered table-sm data-table mb-0">
+    <thead class="table-secondary">
+    <tr>
+        <th>科目ID</th><th>授業科目名</th><th>単位</th><th>対象学科</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for r in subjects %}
+    <tr>
+        <td>{{ r['授業科目ID'] }}</td>
+        <td>{{ r['授業科目名'] }}</td>
+        <td><span class="badge bg-info text-dark">{{ r['単位'] }}</span></td>
+        <td>{{ r['学科名'] }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info" role="alert">授業科目データがありません。</div>
+{% endif %}
+</div>
+{% endblock %}

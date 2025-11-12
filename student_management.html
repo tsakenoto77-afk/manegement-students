@@ -1,0 +1,124 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
+    <style>
+        body { padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .timetable table { width: 100%; border-collapse: collapse; }
+        .timetable th, .timetable td { text-align: center; padding: 5px; }
+        .lesson-box { min-height: 50px; border: 1px solid #ccc; padding: 5px; margin: 2px; }
+        .present { background-color: #d4edda; color: #155724; } /* 出席 */
+        .late { background-color: #fff3cd; color: #856404; } /* 遅刻/欠席(遅刻判定) */
+        .absent { background-color: #f8d7da; color: #721c24; } /* 欠席 */
+        .none { background-color: #f8f9fa; color: #6c757d; } /* 記録なし */
+        .summary-box { border: 1px solid #000; padding: 10px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+    <p><a href="/">ホームに戻る</a></p>
+
+    <h2>学生・期 選択</h2>
+    <form method="GET" action="{{ url_for('student_log_page') }}" class="summary-box">
+        <fieldset>
+            <label for="student_no">学生名:</label>
+            <select name="student_no" id="student_no" required>
+                <option value="">-- 選択してください --</option>
+                {% for student in students %}
+                    <option value="{{ student.学籍番号 }}" {% if selected_student_no == student.学籍番号 %}selected{% endif %}>
+                        {{ student.学籍番号 }} - {{ student.名前 }}
+                    </option>
+                {% endfor %}
+            </select>
+            
+            <label for="term_id">期:</label>
+            <select name="term_id" id="term_id" required>
+                <option value="">-- 選択してください --</option>
+                {% for term in terms %}
+                    {% if term.期ID >= 1 and term.期ID <= 4 %}
+                        <option value="{{ term.期ID }}" {% if selected_term_id == term.期ID %}selected{% endif %}>
+                            {{ term.期名 }}期
+                        </option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+            
+            <button type="submit" class="button-primary">出席状況確認</button>
+        </fieldset>
+    </form>
+
+    {% if selected_student_no and selected_term_id %}
+        <h2>{{ selected_term_id }}期 の授業状況</h2>
+
+        {% if lesson_matrix|length == 0 %}
+            <p>指定された学生（{{ selected_student_no }}）と期（{{ selected_term_id }}）に該当する時間割データが見つかりませんでした。</p>
+        {% else %}
+            <div class="timetable">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>時限</th>
+                            {% for 曜日名 in 曜日順序 %}
+                                <th>{{ 曜日名 }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for 時限 in 時限順序 %}
+                            <tr>
+                                <td>
+                                    {{ 時限 }}限<br>
+                                    {% set detail = data.timetable_details[時限 - 1] if data.timetable_details and (時限 - 1) < data.timetable_details|length else None %}
+                                    {% if detail %}
+                                        <small>({{ detail.開始時刻 }} - {{ detail.終了時刻 }})</small>
+                                    {% endif %}
+                                </td>
+                                {% for 曜日名 in 曜日順序 %}
+                                    <td>
+                                        {% set lesson_data = lesson_matrix.get(曜日名, {}).get(時限) %}
+                                        {% if lesson_data %}
+                                            {% set lesson_info = lesson_data.lesson_info %}
+                                            {% set dates = lesson_data.dates_recorded %}
+                                            
+                                            <div class="lesson-box">
+                                                <strong>{{ lesson_info.授業科目名 or '科目不明' }}</strong>
+                                                <small>({{ lesson_info.教室名 or '教室不明' }})</small>
+                                                <br><br>
+
+                                                {% if dates %}
+                                                    <small>
+                                                        記録数: {{ dates|length }}件<br>
+                                                        {% for record in dates|slice(5) %}
+                                                            <span class="
+                                                                {% if record.出席状況 == '出席' %}present
+                                                                {% elif record.出席状況 == '欠席' and record.入退室状況 == '入室' %}late
+                                                                {% elif record.入退室状況 == '欠席' %}absent
+                                                                {% else %}none
+                                                                {% endif %}
+                                                            ">
+                                                            {{ record.日付.split('-')[1] }}/{{ record.日付.split('-')[2] }} ({{ record.出席状況|slice(1) }})
+                                                            </span>
+                                                        {% endfor %}
+                                                        {% if dates|length > 5 %}<small>...</small>{% endif %}
+                                                    </small>
+                                                {% else %}
+                                                    <small class="none">記録なし</small>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    {% else %}
+        <p>学生と期を選択して、授業の出席状況を確認してください。</p>
+    {% endif %}
+
+</body>
+</html>

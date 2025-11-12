@@ -1,0 +1,137 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+{# 成功/エラーメッセージ表示 #}
+{% if success_msg %}
+    <div class="alert alert-success" role="alert">
+        <i class="fas fa-check-circle me-2"></i>{{ success_msg }}
+    </div>
+{% endif %}
+
+{% if request.args.get('error') %}
+    <div class="alert alert-danger" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>記録エラー: {{ request.args.get('error') }}
+    </div>
+{% endif %}
+
+<hr>
+
+{# ========================================================================= #}
+{# 【修正】手動入退室記録フォーム - 日付・時刻フィールドを追加し、エラーを修正 #}
+{# ========================================================================= #}
+<h2 class="section-title"><i class="fas fa-keyboard me-2"></i>手動入退室記録フォーム (遅刻判定対応)</h2>
+<div class="card p-4 mb-4 bg-light">
+    <form method="POST" action="{{ url_for('record_manual') }}" class="row g-3 align-items-center" id="manualRecordForm">
+        
+        {# 記録日付フィールドを追加 #}
+        <div class="col-md-3">
+            <label for="date" class="form-label fw-bold">記録日付</label>
+            <input type="date" id="date" name="date" class="form-control form-control-lg" required value="{{ today }}">
+        </div>
+        
+        {# 記録時刻フィールドを追加 #}
+        <div class="col-md-2">
+            <label for="time" class="form-label fw-bold">記録時刻</label>
+            <input type="time" id="time" name="time" class="form-control form-control-lg" step="1" required value="{{ current_time }}">
+        </div>
+
+        {# 学籍番号の選択 (レイアウト調整) #}
+        <div class="col-md-3">
+            <label for="suffix_id" class="form-label fw-bold">学籍番号 (下2桁)</label>
+            <div class="input-group input-group-lg">
+                <span class="input-group-text fw-bold" id="basic-addon1">2225213</span>
+                <select id="suffix_id" class="form-select" required>
+                    <option value="" selected disabled>下2桁を選択</option>
+                    {% for i in range(31) %}
+                        {% set suffix = "%02d" | format(i) %}
+                        <option value="{{ suffix }}">{{ suffix }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {# name="student_id" のまま。Python側で取得名に対応済み。 #}
+            <input type="hidden" id="student_id_hidden" name="student_id" required>
+        </div>
+
+        {# 入退室状況 #}
+        <div class="col-md-2">
+            <label for="status" class="form-label fw-bold">状況</label>
+            <select id="status" name="status" class="form-select form-select-lg" required>
+                <option value="" selected disabled>選択</option>
+                <option value="入室">入室</option>
+                <option value="退室">退室</option>
+            </select>
+        </div>
+        
+        {# 記録ボタン #}
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold"><i class="fas fa-save me-1"></i> 記録</button>
+        </div>
+
+        <div class="col-12">
+            <small class="text-muted">?? 記録時刻が授業開始から**5分以上**遅れている場合、「入室」は自動で**遅刻**と判定されます (DB改.pyの`late_threshold_minutes=5`に基づきます)。</small>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('manualRecordForm').addEventListener('submit', function(event) {
+    const prefix = '2225213';
+    const suffixSelect = document.getElementById('suffix_id');
+    const hiddenInput = document.getElementById('student_id_hidden');
+    
+    // ドロップダウンが選択されていることを確認
+    if (suffixSelect.value === "") {
+        alert("学籍番号の下2桁を選択してください。");
+        event.preventDefault(); 
+        return;
+    }
+
+    // 固定部分と選択された2桁を結合して hidden input にセット
+    hiddenInput.value = prefix + suffixSelect.value;
+});
+</script>
+{# ========================================================================= #}
+
+<hr>
+
+<h2 class="section-title"><i class="fas fa-bars me-2"></i>データ閲覧メニュー</h2>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title text-primary"><i class="fas fa-chart-bar me-2"></i>入退室記録ログ</h5>
+                <p class="card-text">学生の入室・退室、および自動判定された欠席の全記録を確認します。</p>
+                <a href="{{ url_for('logs_page') }}" class="btn btn-outline-primary">記録ログを見る</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title text-primary"><i class="fas fa-calendar-alt me-2"></i>週時間割</h5>
+                <p class="card-text">2025年度/電子情報学科の週ごとの授業配置を確認します。</p>
+                <a href="{{ url_for('timetable_page') }}" class="btn btn-outline-primary">週時間割を見る</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title text-primary"><i class="fas fa-clock me-2"></i>時刻管理マスタ</h5>
+                <p class="card-text">各時限の開始時刻、終了時刻、および授業時間を確認します。</p>
+                <a href="{{ url_for('time_master_page') }}" class="btn btn-outline-primary">時刻マスタを見る</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title text-primary"><i class="fas fa-book-open me-2"></i>授業科目マスタ</h5>
+                <p class="card-text">授業科目とその単位、担当学科を確認します。</p>
+                <a href="{{ url_for('subject_master_page') }}" class="btn btn-outline-primary">科目マスタを見る</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
