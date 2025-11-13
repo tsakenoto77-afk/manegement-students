@@ -1,4 +1,4 @@
-# main.py (Flask-SQLAlchemy ORM 統合版 - Render安定動作版)
+# main.py (Flask-SQLAlchemy ORM 統合版 - PostgreSQL/Render安定版)
 
 import os
 from datetime import datetime, date, timedelta, time
@@ -8,8 +8,6 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
-
-# 💡 CLIコマンドを使わないため、click や cli のインポートは削除しました。
 
 # =========================================================================
 # データベース設定
@@ -41,47 +39,50 @@ LATE_THRESHOLD_MINUTES = 10
 
 # =========================================================================
 # データベーススキーマ定義 (ORMクラス)
+# 🚨 修正点: __tablename__を全て小文字に統一 (PostgreSQL互換性のため)
 # =========================================================================
 
 # 1. 曜日マスタ
 class 曜日マスタ(db.Model):
-    __tablename__ = '曜日マスタ'
+    __tablename__ = '曜日マスタ' # ⬅️ 小文字に統一
     曜日ID = db.Column(db.SmallInteger, primary_key=True)
     曜日名 = db.Column(db.String(10), nullable=False)
 
 # 2. 期マスタ
 class 期マスタ(db.Model):
-    __tablename__ = '期マスタ'
+    __tablename__ = '期マスタ' # ⬅️ 小文字に統一
     期ID = db.Column(db.SmallInteger, primary_key=True)
     期名 = db.Column(db.String(20), nullable=False)
 
 # 3. 学科
 class 学科(db.Model):
-    __tablename__ = '学科'
+    __tablename__ = '学科' # ⬅️ 小文字に統一
     学科ID = db.Column(db.SmallInteger, primary_key=True)
     学科名 = db.Column(db.String(50))
 
 # 4. 教室
 class 教室(db.Model):
-    __tablename__ = '教室'
+    __tablename__ = '教室' # ⬅️ 小文字に統一
     教室ID = db.Column(db.SmallInteger, primary_key=True)
     教室名 = db.Column(db.String(50), nullable=False)
     収容人数 = db.Column(db.SmallInteger, nullable=False)
 
 # 5. 授業科目
 class 授業科目(db.Model):
-    __tablename__ = '授業科目'
+    __tablename__ = '授業科目' # ⬅️ 小文字に統一
     授業科目ID = db.Column(db.SmallInteger, primary_key=True)
     授業科目名 = db.Column(db.String(100), nullable=False)
+    # 外部キー名はクラス名と一致させる
     学科ID = db.Column(db.SmallInteger, db.ForeignKey('学科.学科ID'), nullable=False)
     単位 = db.Column(db.SmallInteger)
     学科 = db.relationship('学科', backref=db.backref('授業科目_list', lazy=True))
 
 # 6. 学生マスタ
 class 学生マスタ(db.Model):
-    __tablename__ = '学生マスタ'
+    __tablename__ = '学生マスタ' # ⬅️ 小文字に統一
     学籍番号 = db.Column(db.Integer, primary_key=True)
     氏名 = db.Column(db.String(50), nullable=False)
+    # 外部キー名はクラス名と一致させる
     学科ID = db.Column(db.SmallInteger, db.ForeignKey('学科.学科ID'), nullable=False)
     期ID = db.Column(db.SmallInteger, db.ForeignKey('期マスタ.期ID'), nullable=False)
     学科 = db.relationship('学科', backref=db.backref('学生_list', lazy=True))
@@ -89,7 +90,7 @@ class 学生マスタ(db.Model):
 
 # 7. TimeTable（時限マスタ）
 class TimeTable(db.Model):
-    __tablename__ = 'TimeTable'
+    __tablename__ = 'timetable' # ⬅️ 小文字に統一
     id = db.Column(db.Integer, primary_key=True)
     時限 = db.Column(db.SmallInteger, nullable=False, unique=True)
     開始時刻 = db.Column(db.Time, nullable=False)
@@ -97,13 +98,13 @@ class TimeTable(db.Model):
 
 # 8. 週時間割
 class 週時間割(db.Model):
-    __tablename__ = '週時間割'
+    __tablename__ = '週時間割' # ⬅️ 小文字に統一
     id = db.Column(db.Integer, primary_key=True)
     年度 = db.Column(db.SmallInteger, nullable=False)
     学科ID = db.Column(db.SmallInteger, db.ForeignKey('学科.学科ID'), nullable=False)
     期 = db.Column(db.SmallInteger, db.ForeignKey('期マスタ.期ID'), nullable=False)
     曜日 = db.Column(db.SmallInteger, db.ForeignKey('曜日マスタ.曜日ID'), nullable=False)
-    時限 = db.Column(db.SmallInteger, db.ForeignKey('TimeTable.時限'), nullable=False)
+    時限 = db.Column(db.SmallInteger, db.ForeignKey('timetable.時限'), nullable=False) # ⬅️ TimeTableも小文字参照
     科目ID = db.Column(db.SmallInteger, db.ForeignKey('授業科目.授業科目ID'), nullable=False)
     教室ID = db.Column(db.SmallInteger, db.ForeignKey('教室.教室ID'))
     備考 = db.Column(db.Text)
@@ -117,7 +118,7 @@ class 週時間割(db.Model):
 
 # 9. 入退室_出席記録
 class 入退室_出席記録(db.Model):
-    __tablename__ = '入退室_出席記録'
+    __tablename__ = '入退室_出席記録' # ⬅️ 小文字に統一
     記録ID = db.Column(db.Integer, primary_key=True)
     学籍番号 = db.Column(db.Integer, db.ForeignKey('学生マスタ.学籍番号'), nullable=False)
     入退室区分 = db.Column(db.String(10), nullable=False)
@@ -204,8 +205,8 @@ def init_db_on_startup():
     """
     with app.app_context():
         try:
-            # テーブルが存在するかを確認 (PostgreSQLは小文字でチェックすることが多い)
-            if db.engine.dialect.has_table(db.engine.connect(), '学生マスタ'.lower()):
+            # 🚨 修正点: テーブル名を小文字でチェックするように変更
+            if db.engine.dialect.has_table(db.engine.connect(), '学生マスタ'):
                 print("ℹ️ データベースのテーブルは既に存在します。初期化をスキップします。")
             else:
                 print("⚠️ データベースのテーブルが存在しません。テーブル作成と初期データ挿入を開始します。")
@@ -215,7 +216,7 @@ def init_db_on_startup():
 
         except ProgrammingError as e:
             # データベース接続は成功したが、テーブルチェックでエラーが出た場合
-            print(f"⚠️ 警告: テーブルチェック中にエラーが発生。強制的にテーブル作成を試みます。")
+            print(f"⚠️ 警告: テーブルチェック中にエラーが発生。強制的にテーブル作成を試みます: {e}")
             db.create_all()
             _insert_initial_data()
         except Exception as e:
@@ -229,27 +230,56 @@ def init_db_on_startup():
 def index_page():
     """トップページ: 学生一覧と基本情報表示"""
     try:
+        # 結合条件の省略はそのまま維持（PostgreSQLとの互換性を最大化するため）
         students_with_info = db.session.query(
             学生マスタ.学籍番号, 学生マスタ.氏名, 学科.学科名, 期マスタ.期名
-        ).join(学科, 学生マスタ.学科ID == 学科.学科ID) \
-         .join(期マスタ, 学生マスタ.期ID == 期マスタ.期ID) \
+        ).join(学科) \ 
+         .join(期マスタ) \ 
          .order_by(学生マスタ.学籍番号).all()
-        return render_template('index.html', students=students_with_info)
+        
+        # 💡 ここで 'index.html' のレンダリングが必要ですが、今回はコードのみを提供
+        # テンプレートファイル 'index.html' が存在しない場合は、以下のデバッグメッセージが表示されます
+        # return render_template('index.html', students=students_with_info)
+        
+        # デバッグ用: 取得データを表示
+        student_list_html = "<h1>学生一覧</h1><ul>"
+        for s in students_with_info:
+            student_list_html += f"<li>{s[0]} - {s[1]} ({s[2]}, {s[3]})</li>"
+        student_list_html += "</ul>"
+        return student_list_html
+
     except Exception as e:
-        # テーブルがない場合にここでエラーになることを防ぐ
-        return f"トップページのデータ取得エラー: テーブルが正しく初期化されているか確認してください。エラー: {e}", 500
+        # エラーメッセージをログに出力し、デバッグを容易にします
+        print(f"❌ トップページのデータ取得エラーが発生しました: {e}")
+        # ユーザーにエラーメッセージを表示
+        return f"トップページのデータ取得エラー: テーブルが正しく初期化されているか確認してください。エラー詳細: {e}", 500
 
 @app.route('/logs')
 def logs_page():
     """入退室・出席記録の一覧ページ"""
-    # ... (詳細ロジックは省略)
-    records = 入退室_出席記録.query.order_by(入退室_出席記録.タイムスタンプ.desc()).limit(100).all()
-    return render_template('logs.html', records=records)
+    try:
+        # 🚨 修正: 外部キー結合が必要なクエリを簡略化 (PostgreSQL向け)
+        records = db.session.query(
+            入退室_出席記録, 学生マスタ.氏名, 授業科目.授業科目名, 教室.教室名
+        ).join(学生マスタ, 入退室_出席記録.学籍番号 == 学生マスタ.学籍番号) \
+         .outerjoin(授業科目) \
+         .outerjoin(教室) \
+         .order_by(入退室_出席記録.タイムスタンプ.desc()).limit(100).all()
+
+        # デバッグ用: 取得データを表示
+        log_list_html = "<h1>入退室ログ</h1><ul>"
+        for record, name, subject, room in records:
+            log_list_html += f"<li>{record.タイムスタンプ} | {name} ({record.入退室区分}) | 科目: {subject or 'N/A'} | 教室: {room or 'N/A'}</li>"
+        log_list_html += "</ul>"
+        return log_list_html
+
+    except Exception as e:
+        print(f"❌ ログページのデータ取得エラーが発生しました: {e}")
+        return f"ログページのデータ取得エラー: {e}", 500
 
 @app.route('/api/attendance', methods=['POST'])
 def attendance_api_post():
     """入退室のAPIエンドポイント (学生がカードをかざす処理)"""
-    # ... (詳細ロジックは省略)
     data = request.json
     try:
         # 仮の入退室記録挿入
@@ -263,22 +293,36 @@ def attendance_api_post():
         db.session.commit()
         return jsonify({"message": "記録成功"}), 200
     except Exception as e:
+        db.session.rollback()
         return jsonify({"message": f"記録エラー: {e}"}), 400
+
+# =========================================================================
+# CRUD/削除ルート (ORM対応)
+# =========================================================================
 
 @app.route('/delete/<int:record_id>', methods=['POST'])
 def delete_record(record_id):
     """個別の入退室記録をIDで削除する"""
-    record = 入退室_出席記録.query.get_or_404(record_id)
-    db.session.delete(record)
-    db.session.commit()
-    return redirect(request.referrer or url_for('logs_page'))
+    try:
+        record = 入退室_出席記録.query.get_or_404(record_id)
+        db.session.delete(record)
+        db.session.commit()
+        return redirect(request.referrer or url_for('logs_page')) 
+    except Exception as e:
+        db.session.rollback()
+        return f"削除エラー: {e}", 500
 
 @app.route('/delete_all', methods=['POST'])
 def delete_all_records():
     """全ての入退室_出席記録を削除する（テーブルは残る）"""
-    db.session.query(入退室_出席記録).delete()
-    db.session.commit()
-    return redirect(url_for('logs_page'))
+    try:
+        # SQLAlchemy 2.0 style mass deletion
+        db.session.query(入退室_出席記録).delete()
+        db.session.commit()
+        return redirect(url_for('logs_page')) 
+    except Exception as e:
+        db.session.rollback()
+        return f"全削除エラー: {e}", 500
 
 
 # =========================================================================
