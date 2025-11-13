@@ -233,8 +233,8 @@ def index_page():
         # 結合条件の省略はそのまま維持（PostgreSQLとの互換性を最大化するため）
         students_with_info = db.session.query(
             学生マスタ.学籍番号, 学生マスタ.氏名, 学科.学科名, 期マスタ.期名
-        ).join(学科) \ 
-         .join(期マスタ) \ 
+        ).join(学科) \
+         .join(期マスタ) \
          .order_by(学生マスタ.学籍番号).all()
         
         # 💡 ここで 'index.html' のレンダリングが必要ですが、今回はコードのみを提供
@@ -338,3 +338,4 @@ if __name__ == "__main__":
     print("ORMベースのFlask Webアプリを起動します。")
     print("Render環境ではGunicornを使用してください。")
     app.run(debug=True, host='0.0.0.0', port=5000)
+
