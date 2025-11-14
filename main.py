@@ -366,13 +366,13 @@ def init_db_on_startup():
                 print("データベースのテーブルが存在しません。テーブル作成と初期データ挿入を開始します。")
                 db.create_all() # すべてのテーブルを作成
                 print("テーブル作成が完了しました。")
-                _insert_initial_data() # マスタデータを挿入
+                insert_initial_data() # マスタデータを挿入
 
         except ProgrammingError as e:
             # テーブルチェック中にエラーが発生した場合 (例: データベース自体がまだ準備中)
             print(f"警告: テーブルチェック中にエラーが発生しました ({e.orig.pgcode})。強制的にテーブル作成を試みます。")
             db.create_all()
-            _insert_initial_data()
+            insert_initial_data()
         except Exception as e:
             print(f"致命的なデータベース初期化エラー: {e}")
 
@@ -426,7 +426,7 @@ def initialize_database_on_startup():
             db.drop_all() 
 
             db.create_all()
-            _insert_initial_data() 
+            insert_initial_data() 
             print("✅ データベースの初期化とマスタデータの上書きが完了しました。")
             
         except Exception as e:
@@ -449,6 +449,7 @@ else:
     print("Render/Gunicorn環境でデータベースの初期化を実行します。")
     initialize_database_on_startup() 
     # **注意: ここに app.run() は書かないでください。**
+
 
 
 
