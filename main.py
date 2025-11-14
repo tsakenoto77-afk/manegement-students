@@ -412,16 +412,44 @@ def index_page():
 # データベースの初期化とWebアプリの実行
 # =========================================================================
 
+# アプリケーションコンテキスト内でデータベース初期化を実行する関数
+def initialize_database_on_startup():
+    """
+    アプリケーションコンテキスト内でテーブル作成とマスタデータ挿入を自動で実行する。
+    Gunicorn/Render環境で、アプリ起動時にデータベースを初期化する。
+    """
+    with app.app_context():
+        print("データベース接続を確認し、テーブルをリセットして再作成します...")
+        try:
+            # 【重要】古いデータを完全に消し、最新のマスタデータを挿入するために実行
+            # db.drop_all() のコメントアウトを外し、テーブルを強制削除
+            db.drop_all() 
+
+            db.create_all()
+            _insert_initial_data() 
+            print("✅ データベースの初期化とマスタデータの上書きが完了しました。")
+            
+        except Exception as e:
+            # ログ出力のみ行い、アプリの起動を妨げない
+            print(f"⚠️ データベース初期化中にエラーが発生しましたが、無視して起動を続けます: {e}")
+            
 # 💡 Render環境では、Gunicornがアプリをロードする際に初期化処理が実行されます。
 init_db_on_startup()
 
 
 if __name__ == "__main__":
-    # ローカル開発環境でのみ実行
+    # ローカル実行用: initialize_database_on_startup() を直接呼び出す
     print("\n-------------------------------------------")
-    print("ORMベースのFlask Webアプリを起動します。")
-    print("Render環境ではGunicornを使用してください。")
+    print("ローカル開発環境でデータベースを初期化し、Webアプリを起動します。")
+    initialize_database_on_startup() # ローカル起動時に初期化を実行
     app.run(debug=True, host='0.0.0.0', port=5000)
+else:
+    # Gunicorn/Renderで起動した場合: 初期化関数のみを呼び出す
+    # GunicornがWebサーバーとしての役割を果たすため、app.run() は不要
+    print("Render/Gunicorn環境でデータベースの初期化を実行します。")
+    initialize_database_on_startup() 
+    # **注意: ここに app.run() は書かないでください。**
+
 
 
 
