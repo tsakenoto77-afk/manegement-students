@@ -1,4 +1,4 @@
-me# main.py (Flask-SQLAlchemy ORM 統合版 - Render対応)
+# main.py (Flask-SQLAlchemy ORM 統合版 - Render対応)
 
 import os
 from datetime import datetime, date, timedelta, time
@@ -422,4 +422,5 @@ if __name__ == "__main__":
     print("ORMベースのFlask Webアプリを起動します。")
     print("Render環境ではGunicornを使用してください。")
     app.run(debug=True, host='0.0.0.0', port=5000)
+
 
