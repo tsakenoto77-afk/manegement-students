@@ -1,4 +1,4 @@
-# main.py (Flask-SQLAlchemy ORM 統合版 - Render対応)
+me# main.py (Flask-SQLAlchemy ORM 統合版 - Render対応)
 
 import os
 from datetime import datetime, date, timedelta, time
@@ -390,10 +390,11 @@ def index_page():
         # ✅ 修正: 期マスタとの結合と、期マスタ.期名の選択を削除
         students_with_info = db.session.query(
             学生マスタ.学籍番号,
-            学生マスタ.氏名,
+            学生マスタ.生徒名,
             学科.学科名,
             # 期マスタ.期名 は削除
         ).join(学科, 学生マスタ.学科ID == 学科.学科ID) \
+         .filter(学生マスタ.学科ID == current_class_id) \
          .order_by(学生マスタ.学籍番号).all()
 
         # テンプレートに正しいデータを渡す
@@ -421,3 +422,4 @@ if __name__ == "__main__":
     print("ORMベースのFlask Webアプリを起動します。")
     print("Render環境ではGunicornを使用してください。")
     app.run(debug=True, host='0.0.0.0', port=5000)
+
