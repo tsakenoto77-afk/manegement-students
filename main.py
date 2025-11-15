@@ -1092,20 +1092,3 @@ else:
     #     db.create_all()
     #     insert_initial_data()
     app.logger.info("Render/Gunicorn環境で起動しました。")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
