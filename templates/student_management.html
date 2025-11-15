@@ -1,4 +1,9 @@
-﻿<!DOCTYPE html>
+// {% extends "base.html" %}
+
+{% block title %}学生別出席状況{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -10,9 +15,9 @@
         .timetable th, .timetable td { text-align: center; padding: 5px; }
         .lesson-box { min-height: 50px; border: 1px solid #ccc; padding: 5px; margin: 2px; }
         .present { background-color: #d4edda; color: #155724; } /* 出席 */
-        .late { background-color: #fff3cd; color: #856404; } /* 遅刻/欠席(遅刻判定) */
+        .late { background-color: #fff3cd; color: #856404; } /* 遅刻/途中入室 */
         .absent { background-color: #f8d7da; color: #721c24; } /* 欠席 */
-        .none { background-color: #f8f9fa; color: #6c757d; } /* 記録なし */
+        .none { background-color: #f8f9fa; color: #6c757d; } /* 適用外/記録なし */
         .summary-box { border: 1px solid #000; padding: 10px; margin-bottom: 20px; }
     </style>
 </head>
@@ -21,14 +26,14 @@
     <p><a href="/">ホームに戻る</a></p>
 
     <h2>学生・期 選択</h2>
-    <form method="GET" action="{{ url_for('student_log_page') }}" class="summary-box">
+    <form method="GET" action="{{ url_for('student_management_page') }}" class="summary-box">
         <fieldset>
             <label for="student_no">学生名:</label>
             <select name="student_no" id="student_no" required>
                 <option value="">-- 選択してください --</option>
                 {% for student in students %}
                     <option value="{{ student.学籍番号 }}" {% if selected_student_no == student.学籍番号 %}selected{% endif %}>
-                        {{ student.学籍番号 }} - {{ student.名前 }}
+                        {{ student.学籍番号 }} - {{ student.氏名 }}
                     </option>
                 {% endfor %}
             </select>
@@ -92,13 +97,12 @@
                                                         記録数: {{ dates|length }}件<br>
                                                         {% for record in dates|slice(5) %}
                                                             <span class="
-                                                                {% if record.出席状況 == '出席' %}present
-                                                                {% elif record.出席状況 == '欠席' and record.入退室状況 == '入室' %}late
-                                                                {% elif record.入退室状況 == '欠席' %}absent
+                                                                {% if record.ステータス == '出席' %}present
+                                                                {% elif record.ステータス == '欠席' %}absent
                                                                 {% else %}none
                                                                 {% endif %}
                                                             ">
-                                                            {{ record.日付.split('-')[1] }}/{{ record.日付.split('-')[2] }} ({{ record.出席状況|slice(1) }})
+                                                            {{ record.記録日.strftime('%m/%d') }} ({{ record.ステータス|slice(1) }})
                                                             </span>
                                                         {% endfor %}
                                                         {% if dates|length > 5 %}<small>...</small>{% endif %}
@@ -122,3 +126,4 @@
 
 </body>
 </html>
+{% endblock %}
