@@ -293,7 +293,7 @@ def insert_initial_data(term=3):
     """マスタデータと週時間割の全データを挿入する。期を動的に設定可能。"""
     
     # --- 1. 曜日マスタ ---
-    db.session.add_all([
+    for data in [
         曜日マスタ(曜日ID=0, 曜日名='授業日'),
         曜日マスタ(曜日ID=1, 曜日名='月曜日'),
         曜日マスタ(曜日ID=2, 曜日名='火曜日'),
@@ -304,10 +304,12 @@ def insert_initial_data(term=3):
         曜日マスタ(曜日ID=7, 曜日名='日曜日'),
         曜日マスタ(曜日ID=8, 曜日名='祝祭日'),
         曜日マスタ(曜日ID=9, 曜日名='休日')
-    ])
-
+    ]:
+        if not db.session.query(曜日マスタ).filter_by(曜日ID=data.曜日ID).first():
+            db.session.add(data)
+            
     # --- 2. 期マスタ ---
-    db.session.add_all([
+    for data in [
         期マスタ(期ID=1, 期名='Ⅰ'),
         期マスタ(期ID=2, 期名='Ⅱ'),
         期マスタ(期ID=3, 期名='Ⅲ'),
@@ -318,17 +320,21 @@ def insert_initial_data(term=3):
         期マスタ(期ID=8, 期名='Ⅷ'),
         期マスタ(期ID=9, 期名='前期(Ⅱ期)集中'),
         期マスタ(期ID=10, 期名='後期(Ⅲ期)集中')
-    ])
-
+    ]:
+        if not db.session.query(期マスタ).filter_by(期ID=data.期ID).first():
+            db.session.add(data)
+            
     # --- 3. 学科 ---
-    db.session.add_all([
+    for data in [
         学科(学科ID=1, 学科名='生産機械システム技術科', 備考=''),
         学科(学科ID=2, 学科名='生産電気システム技術科', 備考=''),
         学科(学科ID=3, 学科名='生産電子情報システム技術科', 備考='')
-    ])
+    ]:
+        if not db.session.query(学科).filter_by(学科ID=data.学科ID).first():
+            db.session.add(data)
 
     # --- 4. 教室 ---
-    db.session.add_all([
+    for data in [
         教室(教室ID=1205, 教室名='A205', 収容人数=20, 備考=''),
         教室(教室ID=2102, 教室名='B102/103', 収容人数=20, 備考=''),
         教室(教室ID=2201, 教室名='B201', 収容人数=20, 備考=''),
@@ -359,10 +365,12 @@ def insert_initial_data(term=3):
         教室(教室ID=4231, 教室名='D231(準備室)', 収容人数=20, 備考=''),
         教室(教室ID=4301, 教室名='D301', 収容人数=20, 備考=''),
         教室(教室ID=4302, 教室名='D302(PC実習室)', 収容人数=20, 備考='')
-    ])
+    ]:
+        if not db.session.query(教室).filter_by(教室ID=data.教室ID).first():
+            db.session.add(data)
 
     # --- 5. 授業科目 ---
-    db.session.add_all([
+    for data in [
         授業科目(授業科目ID=301, 授業科目名='工業技術英語', 学科ID=3, 単位=2, 開講期='3,4'),
         授業科目(授業科目ID=302, 授業科目名='生産管理', 学科ID=3, 単位=2, 開講期='3'),
         授業科目(授業科目ID=303, 授業科目名='品質管理', 学科ID=3, 単位=2, 開講期='4'),
@@ -412,8 +420,9 @@ def insert_initial_data(term=3):
         授業科目(授業科目ID=337, 授業科目名='ロボットシステム応用課題実習', 学科ID=3, 単位=54, 開講期='3,4'),
         授業科目(授業科目ID=390, 授業科目名='開発課題', 学科ID=3, 単位=54, 開講期='3,4'),
 
-    ])
-
+    ]:
+        if not db.session.query(授業科目).filter_by(授業科目ID=data.授業科目ID).first():
+            db.session.add(data)
     # --- 6. 学生マスタ (電子情報系 30名) - 新しいスキーマに対応 ---
     STUDENT_GRADE = 3 # 学年
     STUDENT_TERM = term # 期をパラメータ化
@@ -430,19 +439,21 @@ def insert_initial_data(term=3):
         (222521330,'宮岡 嘉熙',3,1,STUDENT_TERM),(222521329,'松隈 駿介',3,1,STUDENT_TERM)
     ]
     
-    db.session.add_all([
-        学生マスタ(学籍番号=s[0], 氏名=s[1], 学科ID=s[2], 学年=s[3], 期=s[4]) for s in students_data
-    ])
-
+    for student in students_data:
+        if not db.session.query(学生マスタ).filter_by(学籍番号=student[0]).first():
+            db.session.add(学生マスタ(学籍番号=student[0], 氏名=student[1], 学科ID=student[2], 学年=student[3], 期=student[4]))
+    
     # --- 7. 時限設定 ---
-    db.session.add_all([
+    for data in [
         TimeTable(時限=1, 開始時刻=time(8, 50), 終了時刻=time(10, 30), 備考='1限目'),
         TimeTable(時限=2, 開始時刻=time(10, 35), 終了時刻=time(12, 15), 備考='2限目'),
         TimeTable(時限=3, 開始時刻=time(13, 0), 終了時刻=time(14, 40), 備考='3限目'),
         TimeTable(時限=4, 開始時刻=time(14, 45), 終了時刻=time(16, 25), 備考='4限目'),
         TimeTable(時限=5, 開始時刻=time(16, 40), 終了時刻=time(18, 20), 備考='5限目')
-    ])
-    
+    ]:
+        if not db.session.query(TimeTable).filter_by(時限=data.時限).first():
+            db.session.add(data)
+            
     # --- 8. 週時間割 (2025年度 電子情報系 302) ---
     # 月曜から金曜の1〜5時限を網羅
     timetable_data = [
@@ -493,23 +504,32 @@ def insert_initial_data(term=3):
         # 金曜日 (曜日ID=5)
         (2025, 3, 4, 5, 1, 331, 3302, 'C101/電子情報系'),
         (2025, 3, 4, 5, 2, 331, 3302, 'C101/電子情報系')
-    ]
+    ]:
 
+    for data in timetable_data:
+        if not db.session.query(週時間割).filter_by(年度=data[0], 学科ID=data[1], 期=data[2], 曜日=data[3], 時限=data[4]).first():
+            db.session.add(週時間割(年度=data[0], 学科ID=data[1], 期=data[2], 曜日=data[3], 時限=data[4], 科目ID=data[5], 教室ID=data[6], 備考=data[7]))
+            
     db.session.add_all([
         週時間割(年度=t[0], 学科ID=t[1], 期=t[2], 曜日=t[3], 時限=t[4], 科目ID=t[5], 教室ID=t[6], 備考=t[7]) for t in timetable_data
     ])
 
-        # --- 教員マスタ ---
-    db.session.add_all([
-        教員マスタ(教員ID=1, 教員名='中山', メールアドレス='nakayama@example.com', パスワード='password'),  # ハッシュ化推奨
+    # --- 9. 教員マスタ ---
+    for data in [
+        教員マスタ(教員ID=1, 教員名='中山', メールアドレス='nakayama@example.com', パスワード='password'),
         教員マスタ(教員ID=2, 教員名='岡田', メールアドレス='okada@example.com', パスワード='password'),
-    ])
-    
-    # --- 教員担当授業 ---
-    db.session.add_all([
-        教員担当授業(教員ID=1, 授業科目ID=327),  # 中山担当
-        教員担当授業(教員ID=2, 授業科目ID=329),  # 岡田担当
-    ])
+    ]:
+        if not db.session.query(教員マスタ).filter_by(教員ID=data.教員ID).first():
+            db.session.add(data)
+
+    # --- 10. 教員担当授業 ---
+    for data in [
+        教員担当授業(ID=1, 教員ID=1, 授業科目ID=327),
+        教員担当授業(ID=2, 教員ID=2, 授業科目ID=329),
+    ]:
+        if not db.session.query(教員担当授業).filter_by(ID=data.ID).first():
+            db.session.add(data)
+
     db.session.commit()
 
 # =========================================================================
@@ -1092,4 +1112,5 @@ else:
         db.create_all()  # テーブル作成
         insert_initial_data()  # 初期データ挿入
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
