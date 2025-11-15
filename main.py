@@ -18,6 +18,22 @@ DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///school.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL.replace("postgres://", "postgresql://")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login_page'
+
+class Teacher(UserMixin):
+    def __init__(self, teacher):
+        self.id = teacher.教員ID
+        self.name = teacher.教員名
+
+@login_manager.user_loader
+def load_user(user_id):
+    teacher = db.session.query(教員マスタ).filter(教員マスタ.教員ID == int(user_id)).first()
+    return Teacher(teacher) if teacher else None
+
 db = SQLAlchemy(app)
 
 # =========================================================================
@@ -1005,6 +1021,7 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
