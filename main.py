@@ -661,7 +661,6 @@ def time_master_page():
         app.logger.error(f"時刻マスタクエリ実行中にエラーが発生しました: {e}")
         return "時刻マスタの取得中にエラーが発生しました。", 500
 
-# --- ここに新しいルートを追加 ---
 @app.route('/add_student', methods=['GET', 'POST'])
 def add_student_page():
     """学生追加ページ: 新しい学生を手動で追加"""
@@ -674,14 +673,20 @@ def add_student_page():
             dept_id = request.form.get('dept_id', type=int)
             term_id = request.form.get('term_id', type=int)
 
+            print(f"Received: {student_no}, {name}, {grade}, {dept_id}, {term_id}")  # デバッグ
+
             # バリデーション
             if not all([student_no, name, grade, dept_id, term_id]):
-                return render_template('add_student.html', error="すべてのフィールドを入力してください。")
+                departments = db.session.query(学科).all()
+                terms = db.session.query(期マスタ).all()
+                return render_template('add_student.html', error="すべてのフィールドを入力してください。", departments=departments, terms=terms)
 
             # 重複チェック
             existing = db.session.query(学生マスタ).filter(学生マスタ.学籍番号 == student_no).first()
             if existing:
-                return render_template('add_student.html', error="この学籍番号は既に存在します。")
+                departments = db.session.query(学科).all()
+                terms = db.session.query(期マスタ).all()
+                return render_template('add_student.html', error="この学籍番号は既に存在します。", departments=departments, terms=terms)
 
             # 新しい学生を追加
             new_student = 学生マスタ(
@@ -694,7 +699,10 @@ def add_student_page():
             db.session.add(new_student)
             db.session.commit()
             app.logger.info(f"学生追加: {student_no} - {name}")
-            return render_template('add_student.html', success="学生を追加しました。")
+            print(f"Added student: {student_no}")  # デバッグ
+            departments = db.session.query(学科).all()
+            terms = db.session.query(期マスタ).all()
+            return render_template('add_student.html', success="学生を追加しました。", departments=departments, terms=terms)
 
         # GET: フォーム表示
         departments = db.session.query(学科).all()
@@ -703,7 +711,10 @@ def add_student_page():
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"学生追加中にエラー: {e}")
-        return render_template('add_student.html', error="追加中にエラーが発生しました。")
+        print(f"Error: {e}")  # デバッグ
+        departments = db.session.query(学科).all()
+        terms = db.session.query(期マスタ).all()
+        return render_template('add_student.html', error="追加中にエラーが発生しました。", departments=departments, terms=terms)
 # =========================================================================
 # データベースの初期化とWebアプリの実行
 # =========================================================================
@@ -715,6 +726,7 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
