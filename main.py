@@ -908,45 +908,68 @@ def attendance_rate_page():
         return "出席率の取得中にエラーが発生しました。", 500
 
 
-# --- ここに新しいルートを追加 ---
 @app.route('/student_attendance_rate')
 def student_attendance_rate_page():
-    """学生別出席率ページ: 学生ごとの総実施回数に対する出席回数の割合を計算し、一覧表示"""
+    """学生別出席率ページ: 学生ごとの総実施回数に対する出席回数の割合を計算し、一覧表示。警告対象を特定。"""
     try:
         # 学生ごとに総実施回数と出席回数を計算
         student_rates = db.session.query(
             学生マスタ.学籍番号,
             学生マスタ.氏名,
-            func.count(週時間割.科目ID).label('total_sessions'),  # 総実施回数（学生の学科・期に基づく週時間割から）
-            func.count(case((入退室_出席記録.ステータス == '出席', 1))).label('attended_sessions')  # 出席回数
+            func.count(週時間割.科目ID).label('total_sessions'),  # 総実施回数
+            func.count(case((入退室_出席記録.ステータス == '出席', 1))).label('attended_sessions'),  # 出席回数
+            func.count(case((入退室_出席記録.ステータス == '欠席', 1))).label('absent_sessions')  # 欠席回数
         ).join(週時間割, and_(
             週時間割.学科ID == 学生マスタ.学科ID,
             週時間割.期 == 学生マスタ.期
         )) \
          .outerjoin(入退室_出席記録, and_(
              入退室_出席記録.学生番号 == 学生マスタ.学籍番号,
-             入退室_出席記録.授業科目ID == 週時間割.科目ID,
-             入退室_出席記録.ステータス == '出席'  # 出席のみカウント
+             入退室_出席記録.授業科目ID == 週時間割.科目ID
          )) \
          .filter(週時間割.年度 == 2025) \
          .group_by(学生マスタ.学籍番号, 学生マスタ.氏名) \
          .order_by(学生マスタ.学籍番号).all()
 
-        # 出席率を計算
+        # 出席率と警告を計算
         rates_list = []
+        warning_students = []
         for rate in student_rates:
             total = rate.total_sessions
             attended = rate.attended_sessions
+            absent = rate.absent_sessions
             percentage = (attended / total * 100) if total > 0 else 0
+            absent_percentage = (absent / total * 100) if total > 0 else 0
+
+            # 連続欠席チェック
+            consecutive_absent = 0
+            max_consecutive = 0
+            records = db.session.query(入退室_出席記録.記録日, 入退室_出席記録.ステータス) \
+                .filter(入退室_出席記録.学生番号 == rate.学籍番号) \
+                .order_by(入退室_出席記録.記録日).all()
+            for record in records:
+                if record.ステータス == '欠席':
+                    consecutive_absent += 1
+                    max_consecutive = max(max_consecutive, consecutive_absent)
+                else:
+                    consecutive_absent = 0
+
+            # 警告判定
+            is_warning = max_consecutive >= 3 or absent_percentage > 20
+            if is_warning:
+                warning_students.append(rate.学籍番号)
+
             rates_list.append({
                 '学籍番号': rate.学籍番号,
                 '氏名': rate.氏名,
                 '総実施回数': total,
                 '出席回数': attended,
-                '出席率': round(percentage, 2)
+                '欠席回数': absent,
+                '出席率': round(percentage, 2),
+                'is_warning': is_warning
             })
 
-        return render_template('student_attendance_rate.html', rates=rates_list)
+        return render_template('student_attendance_rate.html', rates=rates_list, warning_students=warning_students)
     except Exception as e:
         app.logger.error(f"学生別出席率クエリ実行中にエラーが発生しました: {e}")
         return "学生別出席率の取得中にエラーが発生しました。", 500
@@ -961,6 +984,7 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
