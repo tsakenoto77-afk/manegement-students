@@ -1040,6 +1040,38 @@ def login_page():
 def logout_page():
     logout_user()
     return redirect(url_for('login_page'))
+
+
+@app.route('/teacher_view')
+@login_required
+def teacher_view_page():
+    """教員専用ビュー: 自分が担当する授業の学生出欠状況を表示"""
+    try:
+        # 現在の教員の担当授業を取得
+        subjects = db.session.query(授業科目).join(教員担当授業, 教員担当授業.授業科目ID == 授業科目.授業科目ID) \
+            .filter(教員担当授業.教員ID == current_user.id).all()
+
+        # 各授業の学生出欠を取得
+        attendance_data = []
+        for subject in subjects:
+            students = db.session.query(
+                学生マスタ.学籍番号,
+                学生マスタ.氏名,
+                func.count(入退室_出席記録.記録ID).label('absent_count'),
+                func.count(case((入退室_出席記録.ステータス == '出席', 1))).label('attended_count')
+            ).join(入退室_出席記録, 入退室_出席記録.学生番号 == 学生マスタ.学籍番号) \
+             .filter(入退室_出席記録.授業科目ID == subject.授業科目ID) \
+             .group_by(学生マスタ.学籍番号, 学生マスタ.氏名).all()
+
+            attendance_data.append({
+                'subject_name': subject.授業科目名,
+                'students': students
+            })
+
+        return render_template('teacher_view.html', attendance_data=attendance_data)
+    except Exception as e:
+        app.logger.error(f"教員ビュークエリ実行中にエラーが発生しました: {e}")
+        return "教員ビューの取得中にエラーが発生しました。", 500
 # =========================================================================
 # データベースの初期化とWebアプリの実行
 # =========================================================================
@@ -1051,6 +1083,7 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
