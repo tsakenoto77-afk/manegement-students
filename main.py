@@ -866,6 +866,46 @@ def manual_entry_page():
         students = db.session.query(学生マスタ).all()
         subjects = db.session.query(授業科目).all()
         return render_template('manual_entry.html', error="追加中にエラーが発生しました。", students=students, subjects=subjects)
+
+
+# --- ここに新しいルートを追加 ---
+@app.route('/attendance_rate')
+def attendance_rate_page():
+    """出席率ページ: 授業ごとの総実施回数に対する出席回数の割合を計算し、一覧表示"""
+    try:
+        # 授業科目ごとに総実施回数と出席回数を計算
+        attendance_rates = db.session.query(
+            授業科目.授業科目ID,
+            授業科目.授業科目名,
+            func.count(週時間割.科目ID).label('total_sessions'),  # 総実施回数（週時間割から）
+            func.count(case((入退室_出席記録.ステータス == '出席', 1))).label('attended_sessions')  # 出席回数
+        ).join(週時間割, 週時間割.科目ID == 授業科目.授業科目ID) \
+         .outerjoin(入退室_出席記録, and_(
+             入退室_出席記録.授業科目ID == 授業科目.授業科目ID,
+             入退室_出席記録.ステータス == '出席'  # 出席のみカウント
+         )) \
+         .filter(週時間割.年度 == 2025) \
+         .group_by(授業科目.授業科目ID, 授業科目.授業科目名) \
+         .order_by(授業科目.授業科目ID).all()
+
+        # 出席率を計算
+        rates_list = []
+        for rate in attendance_rates:
+            total = rate.total_sessions
+            attended = rate.attended_sessions
+            percentage = (attended / total * 100) if total > 0 else 0
+            rates_list.append({
+                '授業科目ID': rate.授業科目ID,
+                '授業科目名': rate.授業科目名,
+                '総実施回数': total,
+                '出席回数': attended,
+                '出席率': round(percentage, 2)
+            })
+
+        return render_template('attendance_rate.html', rates=rates_list)
+    except Exception as e:
+        app.logger.error(f"出席率クエリ実行中にエラーが発生しました: {e}")
+        return "出席率の取得中にエラーが発生しました。", 500
 # =========================================================================
 # データベースの初期化とWebアプリの実行
 # =========================================================================
@@ -877,6 +917,7 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
