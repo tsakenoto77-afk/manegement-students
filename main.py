@@ -504,7 +504,7 @@ def insert_initial_data(term=3):
         # 金曜日 (曜日ID=5)
         (2025, 3, 4, 5, 1, 331, 3302, 'C101/電子情報系'),
         (2025, 3, 4, 5, 2, 331, 3302, 'C101/電子情報系')
-    ]:
+    ]
 
     for data in timetable_data:
         if not db.session.query(週時間割).filter_by(年度=data[0], 学科ID=data[1], 期=data[2], 曜日=data[3], 時限=data[4]).first():
@@ -1109,6 +1109,7 @@ else:
         db.create_all()  # テーブル作成
         insert_initial_data()  # 初期データ挿入
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
