@@ -5,44 +5,47 @@
 {% block content %}
 <div class="container mt-4">
     <h1>学生追加</h1>
-    <p><a href="/">ホームに戻る</a></p>
+    <p><a href="{{ url_for('index_page') }}">ホームに戻る</a></p>
 
     {% if error %}
-        <div class="alert alert-danger">{{ error }}</div>
+        <div class="alert alert-danger" role="alert">{{ error }}</div>
     {% endif %}
     {% if success %}
-        <div class="alert alert-success">{{ success }}</div>
+        <div class="alert alert-success" role="alert">{{ success }}</div>
     {% endif %}
 
     <form method="POST" action="{{ url_for('add_student_page') }}">
-        <fieldset>
-            <label for="student_no">学籍番号:</label>
-            <input type="number" id="student_no" name="student_no" required>
-
-            <label for="name">氏名:</label>
-            <input type="text" id="name" name="name" required>
-
-            <label for="grade">学年:</label>
-            <input type="number" id="grade" name="grade" min="1" max="4" required>
-
-            <label for="dept_id">学科:</label>
-            <select id="dept_id" name="dept_id" required>
+        <div class="mb-3">
+            <label for="student_no" class="form-label">学籍番号:</label>
+            <input type="number" class="form-control" id="student_no" name="student_no" required>
+        </div>
+        <div class="mb-3">
+            <label for="name" class="form-label">氏名:</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+        </div>
+        <div class="mb-3">
+            <label for="grade" class="form-label">学年:</label>
+            <input type="number" class="form-control" id="grade" name="grade" min="1" max="4" required>
+        </div>
+        <div class="mb-3">
+            <label for="dept_id" class="form-label">学科:</label>
+            <select class="form-select" id="dept_id" name="dept_id" required>
                 <option value="">-- 選択してください --</option>
                 {% for dept in departments %}
                     <option value="{{ dept.学科ID }}">{{ dept.学科名 }}</option>
                 {% endfor %}
             </select>
-
-            <label for="term_id">期:</label>
-            <select id="term_id" name="term_id" required>
+        </div>
+        <div class="mb-3">
+            <label for="term_id" class="form-label">期:</label>
+            <select class="form-select" id="term_id" name="term_id" required>
                 <option value="">-- 選択してください --</option>
                 {% for term in terms %}
                     <option value="{{ term.期ID }}">{{ term.期名 }}</option>
                 {% endfor %}
             </select>
-
-            <button type="submit" class="button-primary">追加</button>
-        </fieldset>
+        </div>
+        <button type="submit" class="btn btn-primary">追加</button>
     </form>
 </div>
 {% endblock %}
