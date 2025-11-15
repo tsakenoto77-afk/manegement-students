@@ -469,7 +469,7 @@ def internal_error(error):
     return "内部サーバーエラー。管理者に連絡してください。", 500
 
 # =========================================================================
-# ルーティング (更新: 欠席確認機能を追加)
+# ルーティング (更新: 欠席確認機能を追加 + 新しいページルート追加)
 # =========================================================================
 
 @app.route('/')
@@ -543,6 +543,60 @@ def trigger_absent_check():
         app.logger.error(f"手動欠席判定実行中にエラー: {e}")
         return jsonify({"error": "実行中にエラーが発生しました。"}), 500
 
+# --- ここに新しいルートを追加 ---
+@app.route('/student_management')
+def student_management_page():
+    """学生別出席状況ページ: 学生ごとの出席記録を表示"""
+    try:
+        # 例: 全学生の出席記録を取得（必要に応じてフィルタリング）
+        records = db.session.query(
+            学生マスタ.学籍番号,
+            学生マスタ.氏名,
+            入退室_出席記録.記録日,
+            入退室_出席記録.ステータス,
+            入退室_出席記録.備考
+        ).join(入退室_出席記録, 入退室_出席記録.学生番号 == 学生マスタ.学籍番号) \
+         .order_by(学生マスタ.学籍番号, 入退室_出席記録.記録日).all()
+
+        return render_template('student_management.html', records=records)
+    except Exception as e:
+        app.logger.error(f"学生別出席状況クエリ実行中にエラーが発生しました: {e}")
+        return "学生別出席状況の取得中にエラーが発生しました。", 500
+
+@app.route('/logs')
+def logs_page():
+    """全ログページ: 入退室記録の全ログを表示"""
+    try:
+        # 例: 全入退室記録を取得
+        logs = db.session.query(入退室_出席記録).order_by(入退室_出席記録.記録ID).all()
+        return render_template('logs.html', logs=logs)
+    except Exception as e:
+        app.logger.error(f"全ログクエリ実行中にエラーが発生しました: {e}")
+        return "全ログの取得中にエラーが発生しました。", 500
+
+@app.route('/timetable')
+def timetable_page():
+    """時間割ページ: 週時間割を表示"""
+    try:
+        # 例: 2025年度の時間割を取得
+        timetables = db.session.query(週時間割).filter(週時間割.年度 == 2025).all()
+        return render_template('timetable.html', timetables=timetables)
+    except Exception as e:
+        app.logger.error(f"時間割クエリ実行中にエラーが発生しました: {e}")
+        return "時間割の取得中にエラーが発生しました。", 500
+
+@app.route('/time_master')
+def time_master_page():
+    """時刻マスタページ: 時限設定を表示"""
+    try:
+        # 例: 全時限を取得
+        times = db.session.query(TimeTable).all()
+        return render_template('time_master.html', times=times)
+    except Exception as e:
+        app.logger.error(f"時刻マスタクエリ実行中にエラーが発生しました: {e}")
+        return "時刻マスタの取得中にエラーが発生しました。", 500
+
+
 # =========================================================================
 # データベースの初期化とWebアプリの実行
 # =========================================================================
@@ -554,3 +608,4 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
