@@ -126,19 +126,20 @@ class 入退室_出席記録(db.Model):
     科目 = db.relationship('授業科目', backref=db.backref('出席記録', lazy=True))
 
 # =========================================================================
-# 自動欠席判定処理機能 (新規追加)
+# 自動欠席判定処理機能 (新規追加 + 遅刻判定拡張)
 # =========================================================================
 
 def auto_absent_check():
     """
     授業開始時刻までに「入室」記録がない学生を「欠席」と記録する。
-    現在の授業スケジュールをチェックし、該当学生に対して入退室_出席記録に欠席レコードを挿入。
+    さらに、授業開始後一定時間（10分）を超えて入室した場合を「遅刻」、20分を超えて入室した場合を「欠席」と記録。
+    現在の授業スケジュールをチェックし、該当学生に対して入退室_出席記録にレコードを挿入。
     """
     now = datetime.now()
     today = date.today()
     today_weekday = now.weekday() + 1  # Pythonのweekday()は0=月曜日なので+1
 
-    app.logger.info(f"自動欠席判定を開始: {now}")
+    app.logger.info(f"自動欠席/遅刻判定を開始: {now}")
 
     try:
         # 1. 今日の授業スケジュールを取得 (週時間割から)
@@ -156,12 +157,10 @@ def auto_absent_check():
             if not timetable:
                 continue
             class_start_time = datetime.combine(today, timetable.開始時刻)
-            # 判定タイミング: 授業開始 + LATE_THRESHOLD_MINUTES
-            check_time = class_start_time + timedelta(minutes=LATE_THRESHOLD_MINUTES)
-
-            if now < check_time:
-                # まだ判定タイミングではない
-                continue
+            # 遅刻判定タイミング: 授業開始 + LATE_THRESHOLD_MINUTES
+            late_check_time = class_start_time + timedelta(minutes=LATE_THRESHOLD_MINUTES)
+            # 欠席判定タイミング: 授業開始 + ABSENT_THRESHOLD_MINUTES
+            absent_check_time = class_start_time + timedelta(minutes=ABSENT_THRESHOLD_MINUTES)
 
             # 2. 該当授業の学生リストを取得 (学科・期に基づく)
             students = db.session.query(学生マスタ).filter(
@@ -184,44 +183,53 @@ def auto_absent_check():
                 ).first()
 
                 if existing_record:
-                    # 入室記録があるのでスキップ
+                    # 入室記録がある場合、遅刻判定
+                    if existing_record.入室日時 > late_check_time and existing_record.入室日時 <= absent_check_time:
+                        # 遅刻判定: ステータスを'遅刻'に更新（既存が'未定'の場合）
+                        if existing_record.ステータス == '未定':
+                            existing_record.ステータス = '遅刻'
+                            existing_record.備考 = '自動遅刻判定'
+                            app.logger.info(f"遅刻記録更新: 学生 {student.学籍番号} - 科目 {schedule.科目ID}")
+                    # 出席の場合はそのまま（既存記録を尊重）
                     continue
 
-                # 欠席レコードが既に存在するかチェック
-                absent_record = db.session.query(入退室_出席記録).filter(
-                    and_(
-                        入退室_出席記録.学生番号 == student.学籍番号,
-                        入退室_出席記録.記録日 == today,
-                        入退室_出席記録.授業科目ID == schedule.科目ID,
-                        入退室_出席記録.ステータス == '欠席'
+                # 入室記録がない場合、欠席判定
+                if now > absent_check_time:
+                    # 欠席レコードが既に存在するかチェック
+                    absent_record = db.session.query(入退室_出席記録).filter(
+                        and_(
+                            入退室_出席記録.学生番号 == student.学籍番号,
+                            入退室_出席記録.記録日 == today,
+                            入退室_出席記録.授業科目ID == schedule.科目ID,
+                            入退室_出席記録.ステータス == '欠席'
+                        )
+                    ).first()
+
+                    if absent_record:
+                        # 既に欠席記録があるのでスキップ
+                        continue
+
+                    # 欠席レコードを挿入
+                    week_schedule_id = f"{schedule.年度}-{schedule.学科ID}-{schedule.期}-{schedule.曜日}-{schedule.時限}"
+                    new_absent_record = 入退室_出席記録(
+                        学生番号=student.学籍番号,
+                        入室日時=None,  # 入室なし
+                        退室日時=None,
+                        記録日=today,
+                        ステータス='欠席',
+                        授業科目ID=schedule.科目ID,
+                        週時間割ID=week_schedule_id,
+                        備考='自動欠席判定'
                     )
-                ).first()
-
-                if absent_record:
-                    # 既に欠席記録があるのでスキップ
-                    continue
-
-                # 4. 欠席レコードを挿入
-                week_schedule_id = f"{schedule.年度}-{schedule.学科ID}-{schedule.期}-{schedule.曜日}-{schedule.時限}"
-                new_absent_record = 入退室_出席記録(
-                    学生番号=student.学籍番号,
-                    入室日時=None,  # 入室なし
-                    退室日時=None,
-                    記録日=today,
-                    ステータス='欠席',
-                    授業科目ID=schedule.科目ID,
-                    週時間割ID=week_schedule_id,
-                    備考='自動欠席判定'
-                )
-                db.session.add(new_absent_record)
-                app.logger.info(f"欠席記録挿入: 学生 {student.学籍番号} - 科目 {schedule.科目ID}")
+                    db.session.add(new_absent_record)
+                    app.logger.info(f"欠席記録挿入: 学生 {student.学籍番号} - 科目 {schedule.科目ID}")
 
         db.session.commit()
-        app.logger.info("自動欠席判定完了")
+        app.logger.info("自動欠席/遅刻判定完了")
 
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"自動欠席判定中にエラー: {e}")
+        app.logger.error(f"自動欠席/遅刻判定中にエラー: {e}")
 
 
 
@@ -665,5 +673,6 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
