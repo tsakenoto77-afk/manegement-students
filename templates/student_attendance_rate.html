@@ -7,6 +7,12 @@
     <h1>学生別出席率一覧</h1>
     <p><a href="{{ url_for('index_page') }}">ホームに戻る</a></p>
 
+    {% if warning_students %}
+        <div class="alert alert-warning" role="alert">
+            <strong>警告:</strong> 以下の学生が連続欠席3回以上または累計欠席数が20%を超えています: {{ warning_students|join(', ') }}
+        </div>
+    {% endif %}
+
     <div class="card p-4 mb-4">
         <table class="table table-striped table-hover">
             <thead>
@@ -15,16 +21,19 @@
                     <th scope="col">氏名</th>
                     <th scope="col">総実施回数</th>
                     <th scope="col">出席回数</th>
+                    <th scope="col">欠席回数</th>
                     <th scope="col">出席率 (%)</th>
+                    <th scope="col">警告</th>
                 </tr>
             </thead>
             <tbody>
                 {% for rate in rates %}
-                <tr>
+                <tr {% if rate.is_warning %}class="table-danger"{% endif %}>
                     <td>{{ rate.学籍番号 }}</td>
                     <td>{{ rate.氏名 }}</td>
                     <td>{{ rate.総実施回数 }}</td>
                     <td>{{ rate.出席回数 }}</td>
+                    <td>{{ rate.欠席回数 }}</td>
                     <td>
                         {% if rate.出席率 >= 80 %}
                             <span class="badge bg-success">{{ rate.出席率 }}%</span>
@@ -34,10 +43,17 @@
                             <span class="badge bg-danger">{{ rate.出席率 }}%</span>
                         {% endif %}
                     </td>
+                    <td>
+                        {% if rate.is_warning %}
+                            <span class="badge bg-danger">警告</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="text-center text-muted">データがありません。</td>
+                    <td colspan="7" class="text-center text-muted">データがありません。</td>
                 </tr>
                 {% endfor %}
             </tbody>
