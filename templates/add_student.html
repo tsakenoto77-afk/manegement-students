@@ -1,0 +1,48 @@
+// {% extends "base.html" %}
+
+{% block title %}学生追加{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>学生追加</h1>
+    <p><a href="/">ホームに戻る</a></p>
+
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    {% if success %}
+        <div class="alert alert-success">{{ success }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('add_student_page') }}">
+        <fieldset>
+            <label for="student_no">学籍番号:</label>
+            <input type="number" id="student_no" name="student_no" required>
+
+            <label for="name">氏名:</label>
+            <input type="text" id="name" name="name" required>
+
+            <label for="grade">学年:</label>
+            <input type="number" id="grade" name="grade" min="1" max="4" required>
+
+            <label for="dept_id">学科:</label>
+            <select id="dept_id" name="dept_id" required>
+                <option value="">-- 選択してください --</option>
+                {% for dept in departments %}
+                    <option value="{{ dept.学科ID }}">{{ dept.学科名 }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="term_id">期:</label>
+            <select id="term_id" name="term_id" required>
+                <option value="">-- 選択してください --</option>
+                {% for term in terms %}
+                    <option value="{{ term.期ID }}">{{ term.期名 }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit" class="button-primary">追加</button>
+        </fieldset>
+    </form>
+</div>
+{% endblock %}
