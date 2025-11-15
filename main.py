@@ -785,6 +785,72 @@ def add_student_page():
         departments = db.session.query(学科).all()
         terms = db.session.query(期マスタ).all()
         return render_template('add_student.html', error="追加中にエラーが発生しました。", departments=departments, terms=terms)
+
+
+# --- ここに新しいルートを追加 ---
+@app.route('/manual_entry', methods=['GET', 'POST'])
+def manual_entry_page():
+    """手動入退室記録ページ: 既存の学生を選択して入退室記録を追加"""
+    try:
+        if request.method == 'POST':
+            # フォームデータ取得
+            student_no = request.form.get('student_no', type=int)
+            entry_datetime = request.form.get('entry_datetime')
+            exit_datetime = request.form.get('exit_datetime')
+            status = request.form.get('status')
+            subject_id = request.form.get('subject_id', type=int)
+
+            # バリデーション
+            if not all([student_no, entry_datetime, status]):
+                students = db.session.query(学生マスタ).all()
+                subjects = db.session.query(授業科目).all()
+                return render_template('manual_entry.html', error="必須フィールドを入力してください。", students=students, subjects=subjects)
+
+            # 日時変換
+            entry_dt = datetime.fromisoformat(entry_datetime) if entry_datetime else None
+            exit_dt = datetime.fromisoformat(exit_datetime) if exit_datetime else None
+            record_date = entry_dt.date() if entry_dt else date.today()
+
+            # 重複チェック（同じ学生・日・科目で既存記録がないか）
+            existing = db.session.query(入退室_出席記録).filter(
+                and_(
+                    入退室_出席記録.学生番号 == student_no,
+                    入退室_出席記録.記録日 == record_date,
+                    入退室_出席記録.授業科目ID == subject_id
+                )
+            ).first()
+            if existing:
+                students = db.session.query(学生マスタ).all()
+                subjects = db.session.query(授業科目).all()
+                return render_template('manual_entry.html', error="この学生・日・科目の記録は既に存在します。", students=students, subjects=subjects)
+
+            # 新しい記録を追加
+            new_record = 入退室_出席記録(
+                学生番号=student_no,
+                入室日時=entry_dt,
+                退室日時=exit_dt,
+                記録日=record_date,
+                ステータス=status,
+                授業科目ID=subject_id,
+                備考='手動入力'
+            )
+            db.session.add(new_record)
+            db.session.commit()
+            app.logger.info(f"手動記録追加: 学生 {student_no} - ステータス {status}")
+            students = db.session.query(学生マスタ).all()
+            subjects = db.session.query(授業科目).all()
+            return render_template('manual_entry.html', success="記録を追加しました。", students=students, subjects=subjects)
+
+        # GET: フォーム表示
+        students = db.session.query(学生マスタ).all()
+        subjects = db.session.query(授業科目).all()
+        return render_template('manual_entry.html', students=students, subjects=subjects)
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"手動記録追加中にエラー: {e}")
+        students = db.session.query(学生マスタ).all()
+        subjects = db.session.query(授業科目).all()
+        return render_template('manual_entry.html', error="追加中にエラーが発生しました。", students=students, subjects=subjects)
 # =========================================================================
 # データベースの初期化とWebアプリの実行
 # =========================================================================
@@ -796,6 +862,7 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
