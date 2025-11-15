@@ -133,6 +133,7 @@ def auto_absent_check():
     """
     授業開始時刻までに「入室」記録がない学生を「欠席」と記録する。
     さらに、授業開始後一定時間（10分）を超えて入室した場合を「遅刻」、20分を超えて入室した場合を「欠席」と記録。
+    授業時間帯中に複数回の入退室がある場合、「途中入室」や「途中退室」として記録。
     現在の授業スケジュールをチェックし、該当学生に対して入退室_出席記録にレコードを挿入。
     """
     now = datetime.now()
@@ -157,6 +158,7 @@ def auto_absent_check():
             if not timetable:
                 continue
             class_start_time = datetime.combine(today, timetable.開始時刻)
+            class_end_time = datetime.combine(today, timetable.終了時刻)
             # 遅刻判定タイミング: 授業開始 + LATE_THRESHOLD_MINUTES
             late_check_time = class_start_time + timedelta(minutes=LATE_THRESHOLD_MINUTES)
             # 欠席判定タイミング: 授業開始 + ABSENT_THRESHOLD_MINUTES
@@ -173,24 +175,38 @@ def auto_absent_check():
             # 3. 各学生について、入室記録があるかをチェック
             for student in students:
                 # 入退室_出席記録で、今日のこの授業の入室記録があるか？
-                existing_record = db.session.query(入退室_出席記録).filter(
+                records = db.session.query(入退室_出席記録).filter(
                     and_(
                         入退室_出席記録.学生番号 == student.学籍番号,
                         入退室_出席記録.記録日 == today,
-                        入退室_出席記録.授業科目ID == schedule.科目ID,
-                        入退室_出席記録.入室日時.isnot(None)  # 入室記録あり
+                        入退室_出席記録.授業科目ID == schedule.科目ID
                     )
-                ).first()
+                ).order_by(入退室_出席記録.入室日時).all()
 
-                if existing_record:
-                    # 入室記録がある場合、遅刻判定
-                    if existing_record.入室日時 > late_check_time and existing_record.入室日時 <= absent_check_time:
-                        # 遅刻判定: ステータスを'遅刻'に更新（既存が'未定'の場合）
-                        if existing_record.ステータス == '未定':
-                            existing_record.ステータス = '遅刻'
-                            existing_record.備考 = '自動遅刻判定'
-                            app.logger.info(f"遅刻記録更新: 学生 {student.学籍番号} - 科目 {schedule.科目ID}")
-                    # 出席の場合はそのまま（既存記録を尊重）
+                if records:
+                    # 複数回の入退室がある場合、途中入室/退室を判定
+                    entry_count = sum(1 for r in records if r.入室日時 is not None)
+                    exit_count = sum(1 for r in records if r.退室日時 is not None)
+                    if entry_count > 1 or exit_count > 1:
+                        # 授業時間帯中に複数回入退室がある場合
+                        for record in records:
+                            if record.入室日時 and class_start_time <= record.入室日時 <= class_end_time:
+                                if record.入室日時 > class_start_time:
+                                    record.ステータス = '途中入室'
+                                    record.備考 = '自動途中入室判定'
+                            if record.退室日時 and class_start_time <= record.退室日時 <= class_end_time:
+                                if record.退室日時 < class_end_time:
+                                    record.ステータス = '途中退室'
+                                    record.備考 = '自動途中退室判定'
+                        app.logger.info(f"途中入退室判定: 学生 {student.学籍番号} - 科目 {schedule.科目ID}")
+
+                    # 遅刻判定（既存ロジック）
+                    for record in records:
+                        if record.入室日時 and record.入室日時 > late_check_time and record.入室日時 <= absent_check_time:
+                            if record.ステータス == '未定':
+                                record.ステータス = '遅刻'
+                                record.備考 = '自動遅刻判定'
+                                app.logger.info(f"遅刻記録更新: 学生 {student.学籍番号} - 科目 {schedule.科目ID}")
                     continue
 
                 # 入室記録がない場合、欠席判定
@@ -230,7 +246,6 @@ def auto_absent_check():
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"自動欠席/遅刻判定中にエラー: {e}")
-
 
 
 # =========================================================================
@@ -862,6 +877,7 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
