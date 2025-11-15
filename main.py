@@ -1078,11 +1078,21 @@ def teacher_view_page():
 
 if __name__ == "__main__":
     # ローカル実行用: デバッグモードを環境変数で制御
+    # ここに追加: ローカル実行時にもDB初期化を実行
+    with app.app_context():
+        db.create_all()  # テーブル作成
+        insert_initial_data()  # 初期データ挿入
+    
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     app.run(debug=debug_mode, host='0.0.0.0', port=5000)
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
+    # 必要に応じてここにDB初期化を追加（例: 初回デプロイ時）
+    # with app.app_context():
+    #     db.create_all()
+    #     insert_initial_data()
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
