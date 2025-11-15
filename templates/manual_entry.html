@@ -1,0 +1,56 @@
+// {% extends "base.html" %}
+
+{% block title %}手動入退室記録{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>手動入退室記録</h1>
+    <p><a href="{{ url_for('index_page') }}">ホームに戻る</a></p>
+
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    {% if success %}
+        <div class="alert alert-success">{{ success }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('manual_entry_page') }}">
+        <div class="mb-3">
+            <label for="student_no" class="form-label">学生:</label>
+            <select class="form-select" id="student_no" name="student_no" required>
+                <option value="">-- 選択してください --</option>
+                {% for student in students %}
+                    <option value="{{ student.学籍番号 }}">{{ student.学籍番号 }} - {{ student.氏名 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="entry_datetime" class="form-label">入室日時:</label>
+            <input type="datetime-local" class="form-control" id="entry_datetime" name="entry_datetime" required>
+        </div>
+        <div class="mb-3">
+            <label for="exit_datetime" class="form-label">退室日時:</label>
+            <input type="datetime-local" class="form-control" id="exit_datetime" name="exit_datetime">
+        </div>
+        <div class="mb-3">
+            <label for="status" class="form-label">ステータス:</label>
+            <select class="form-select" id="status" name="status" required>
+                <option value="出席">出席</option>
+                <option value="遅刻">遅刻</option>
+                <option value="欠席">欠席</option>
+                <option value="早退">早退</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="subject_id" class="form-label">授業科目:</label>
+            <select class="form-select" id="subject_id" name="subject_id">
+                <option value="">-- 選択してください --</option>
+                {% for subject in subjects %}
+                    <option value="{{ subject.授業科目ID }}">{{ subject.授業科目名 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">記録追加</button>
+    </form>
+</div>
+{% endblock %}
