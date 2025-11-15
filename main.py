@@ -510,9 +510,6 @@ def insert_initial_data(term=3):
         if not db.session.query(週時間割).filter_by(年度=data[0], 学科ID=data[1], 期=data[2], 曜日=data[3], 時限=data[4]).first():
             db.session.add(週時間割(年度=data[0], 学科ID=data[1], 期=data[2], 曜日=data[3], 時限=data[4], 科目ID=data[5], 教室ID=data[6], 備考=data[7]))
             
-    db.session.add_all([
-        週時間割(年度=t[0], 学科ID=t[1], 期=t[2], 曜日=t[3], 時限=t[4], 科目ID=t[5], 教室ID=t[6], 備考=t[7]) for t in timetable_data
-    ])
 
     # --- 9. 教員マスタ ---
     for data in [
@@ -1112,5 +1109,6 @@ else:
         db.create_all()  # テーブル作成
         insert_initial_data()  # 初期データ挿入
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
