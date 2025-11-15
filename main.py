@@ -546,19 +546,76 @@ def trigger_absent_check():
 # --- ここに新しいルートを追加 ---
 @app.route('/student_management')
 def student_management_page():
-    """学生別出席状況ページ: 学生ごとの出席記録を表示"""
+    """学生別出席状況ページ: 学生ごとの出席記録を表示（時間割ベース）"""
     try:
-        # 例: 全学生の出席記録を取得（必要に応じてフィルタリング）
-        records = db.session.query(
-            学生マスタ.学籍番号,
-            学生マスタ.氏名,
-            入退室_出席記録.記録日,
-            入退室_出席記録.ステータス,
-            入退室_出席記録.備考
-        ).join(入退室_出席記録, 入退室_出席記録.学生番号 == 学生マスタ.学籍番号) \
-         .order_by(学生マスタ.学籍番号, 入退室_出席記録.記録日).all()
+        # GETパラメータを取得
+        selected_student_no = request.args.get('student_no', type=int)
+        selected_term_id = request.args.get('term_id', type=int)
 
-        return render_template('student_management.html', records=records)
+        # 全学生と期を取得
+        students = db.session.query(学生マスタ).all()
+        terms = db.session.query(期マスタ).filter(期マスタ.期ID.between(1, 4)).all()
+
+        # 曜日と時限の順序
+        曜日順序 = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日']
+        時限順序 = [1, 2, 3, 4, 5]
+
+        # 時限詳細を取得
+        timetable_details = db.session.query(TimeTable).order_by(TimeTable.時限).all()
+
+        lesson_matrix = {}
+        if selected_student_no and selected_term_id:
+            # 選択された学生の学科を取得
+            student = db.session.query(学生マスタ).filter(学生マスタ.学籍番号 == selected_student_no).first()
+            if not student:
+                return render_template('student_management.html', students=students, terms=terms, 曜日順序=曜日順序, 時限順序=時限順序, selected_student_no=selected_student_no, selected_term_id=selected_term_id, lesson_matrix={}, data={'timetable_details': timetable_details})
+
+            # 該当する時間割を取得（年度固定: 2025）
+            schedules = db.session.query(週時間割).filter(
+                and_(
+                    週時間割.年度 == 2025,
+                    週時間割.学科ID == student.学科ID,
+                    週時間割.期 == selected_term_id
+                )
+            ).all()
+
+            # 曜日IDを曜日名にマッピング
+            weekday_map = {1: '月曜日', 2: '火曜日', 3: '水曜日', 4: '木曜日', 5: '金曜日'}
+
+            # lesson_matrixを構築
+            for schedule in schedules:
+                weekday_name = weekday_map.get(schedule.曜日)
+                if weekday_name not in lesson_matrix:
+                    lesson_matrix[weekday_name] = {}
+                
+                # 出席記録を取得（該当授業の記録）
+                records = db.session.query(入退室_出席記録).filter(
+                    and_(
+                        入退室_出席記録.学生番号 == selected_student_no,
+                        入退室_出席記録.授業科目ID == schedule.科目ID
+                    )
+                ).order_by(入退室_出席記録.記録日).all()
+
+                # 記録を日付形式に変換
+                dates_recorded = [{'記録日': record.記録日, 'ステータス': record.ステータス} for record in records]
+
+                lesson_matrix[weekday_name][schedule.時限] = {
+                    'lesson_info': {
+                        '授業科目名': schedule.科目.授業科目名 if schedule.科目 else '科目不明',
+                        '教室名': schedule.教室.教室名 if schedule.教室 else '教室不明'
+                    },
+                    'dates_recorded': dates_recorded
+                }
+
+        return render_template('student_management.html', 
+                               students=students, 
+                               terms=terms, 
+                               曜日順序=曜日順序, 
+                               時限順序=時限順序, 
+                               selected_student_no=selected_student_no, 
+                               selected_term_id=selected_term_id, 
+                               lesson_matrix=lesson_matrix, 
+                               data={'timetable_details': timetable_details})
     except Exception as e:
         app.logger.error(f"学生別出席状況クエリ実行中にエラーが発生しました: {e}")
         return "学生別出席状況の取得中にエラーが発生しました。", 500
@@ -608,4 +665,5 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
