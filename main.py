@@ -126,6 +126,27 @@ class 入退室_出席記録(db.Model):
     科目 = db.relationship('授業科目', backref=db.backref('出席記録', lazy=True))
 
 # =========================================================================
+# データベーススキーマ定義 (拡張: 教員関連)
+# =========================================================================
+
+class 教員マスタ(db.Model):
+    __tablename__ = '教員マスタ'
+    教員ID = db.Column(db.SmallInteger, primary_key=True)
+    教員名 = db.Column(db.String(50), nullable=False)
+    メールアドレス = db.Column(db.String(100), nullable=False, unique=True)
+    パスワード = db.Column(db.String(100), nullable=False)  # ハッシュ化推奨
+    備考 = db.Column(db.Text)
+
+class 教員担当授業(db.Model):
+    __tablename__ = '教員担当授業'
+    ID = db.Column(db.Integer, primary_key=True)
+    教員ID = db.Column(db.SmallInteger, db.ForeignKey('教員マスタ.教員ID'), nullable=False)
+    授業科目ID = db.Column(db.SmallInteger, db.ForeignKey('授業科目.授業科目ID'), nullable=False)
+    備考 = db.Column(db.Text)
+
+    教員 = db.relationship('教員マスタ', backref=db.backref('担当授業', lazy=True))
+    科目 = db.relationship('授業科目', backref=db.backref('担当教員', lazy=True))
+# =========================================================================
 # 自動欠席判定処理機能 (新規追加 + 遅刻判定拡張)
 # =========================================================================
 
@@ -984,6 +1005,7 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
