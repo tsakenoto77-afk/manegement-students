@@ -1021,6 +1021,25 @@ def student_attendance_rate_page():
     except Exception as e:
         app.logger.error(f"学生別出席率クエリ実行中にエラーが発生しました: {e}")
         return "学生別出席率の取得中にエラーが発生しました。", 500
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login_page():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        teacher = db.session.query(教員マスタ).filter(教員マスタ.メールアドレス == email, 教員マスタ.パスワード == password).first()
+        if teacher:
+            login_user(Teacher(teacher))
+            return redirect(url_for('teacher_view_page'))
+        return render_template('login.html', error="ログイン失敗")
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout_page():
+    logout_user()
+    return redirect(url_for('login_page'))
 # =========================================================================
 # データベースの初期化とWebアプリの実行
 # =========================================================================
@@ -1032,6 +1051,7 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
