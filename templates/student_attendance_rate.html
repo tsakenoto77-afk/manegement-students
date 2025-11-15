@@ -1,0 +1,47 @@
+// {% extends "base.html" %}
+
+{% block title %}学生別出席率{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>学生別出席率一覧</h1>
+    <p><a href="{{ url_for('index_page') }}">ホームに戻る</a></p>
+
+    <div class="card p-4 mb-4">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th scope="col">学籍番号</th>
+                    <th scope="col">氏名</th>
+                    <th scope="col">総実施回数</th>
+                    <th scope="col">出席回数</th>
+                    <th scope="col">出席率 (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rate in rates %}
+                <tr>
+                    <td>{{ rate.学籍番号 }}</td>
+                    <td>{{ rate.氏名 }}</td>
+                    <td>{{ rate.総実施回数 }}</td>
+                    <td>{{ rate.出席回数 }}</td>
+                    <td>
+                        {% if rate.出席率 >= 80 %}
+                            <span class="badge bg-success">{{ rate.出席率 }}%</span>
+                        {% elif rate.出席率 >= 60 %}
+                            <span class="badge bg-warning">{{ rate.出席率 }}%</span>
+                        {% else %}
+                            <span class="badge bg-danger">{{ rate.出席率 }}%</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted">データがありません。</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
