@@ -499,6 +499,17 @@ def insert_initial_data(term=3):
         週時間割(年度=t[0], 学科ID=t[1], 期=t[2], 曜日=t[3], 時限=t[4], 科目ID=t[5], 教室ID=t[6], 備考=t[7]) for t in timetable_data
     ])
 
+        # --- 教員マスタ ---
+    db.session.add_all([
+        教員マスタ(教員ID=1, 教員名='中山', メールアドレス='nakayama@example.com', パスワード='password'),  # ハッシュ化推奨
+        教員マスタ(教員ID=2, 教員名='岡田', メールアドレス='okada@example.com', パスワード='password'),
+    ])
+    
+    # --- 教員担当授業 ---
+    db.session.add_all([
+        教員担当授業(教員ID=1, 授業科目ID=327),  # 中山担当
+        教員担当授業(教員ID=2, 授業科目ID=329),  # 岡田担当
+    ])
     db.session.commit()
 
 # =========================================================================
@@ -1021,6 +1032,7 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
