@@ -480,20 +480,87 @@ def internal_error(error):
 # ルーティング (更新: 欠席確認機能を追加 + 新しいページルート追加)
 # =========================================================================
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index_page():
     current_class_id = 3
     current_class_name = "電子情報系3年"
     today = date.today()
 
     try:
-        # 学生リストに欠席カウントを追加 (今日の欠席数をカウント)
+        if request.method == 'POST':
+            # 学生追加処理
+            student_no = request.form.get('student_no', type=int)
+            name = request.form.get('name')
+            grade = request.form.get('grade', type=int)
+            dept_id = request.form.get('dept_id', type=int)
+            term_id = request.form.get('term_id', type=int)
+
+            # バリデーション
+            if not all([student_no, name, grade, dept_id, term_id]):
+                return render_template('index.html', 
+                                       students=[], 
+                                       current_class=current_class_name, 
+                                       current_class_id=current_class_id, 
+                                       error="すべてのフィールドを入力してください。", 
+                                       departments=db.session.query(学科).all(), 
+                                       terms=db.session.query(期マスタ).all())
+
+            # 重複チェック
+            existing = db.session.query(学生マスタ).filter(学生マスタ.学籍番号 == student_no).first()
+            if existing:
+                return render_template('index.html', 
+                                       students=[], 
+                                       current_class=current_class_name, 
+                                       current_class_id=current_class_id, 
+                                       error="この学籍番号は既に存在します。", 
+                                       departments=db.session.query(学科).all(), 
+                                       terms=db.session.query(期マスタ).all())
+
+            # 新しい学生を追加
+            new_student = 学生マスタ(
+                学籍番号=student_no,
+                氏名=name,
+                学年=grade,
+                学科ID=dept_id,
+                期=term_id
+            )
+            db.session.add(new_student)
+            db.session.commit()
+            app.logger.info(f"学生追加: {student_no} - {name}")
+
+            # 学生一覧を再取得
+            students_with_info = db.session.query(
+                学生マスタ.学籍番号,
+                学生マスタ.氏名,
+                学科.学科名,
+                期マスタ.期名,
+                func.count(入退室_出席記録.記録ID).label('absent_count')
+            ).join(学科, 学生マスタ.学科ID == 学科.学科ID) \
+             .join(期マスタ, 学生マスタ.期 == 期マスタ.期ID) \
+             .outerjoin(入退室_出席記録, and_(
+                 入退室_出席記録.学生番号 == 学生マスタ.学籍番号,
+                 入退室_出席記録.記録日 == today,
+                 入退室_出席記録.ステータス == '欠席'
+             )) \
+             .filter(学生マスタ.学科ID == current_class_id) \
+             .group_by(学生マスタ.学籍番号, 学生マスタ.氏名, 学科.学科名, 期マスタ.期名) \
+             .order_by(学生マスタ.学籍番号).all()
+
+            return render_template('index.html', 
+                                   students=students_with_info, 
+                                   current_class=current_class_name, 
+                                   current_class_id=current_class_id, 
+                                   success="学生を追加しました。", 
+                                   departments=db.session.query(学科).all(), 
+                                   terms=db.session.query(期マスタ).all())
+
+        # GET: 学生一覧表示
         students_with_info = db.session.query(
             学生マスタ.学籍番号,
             学生マスタ.氏名,
             学科.学科名,
             期マスタ.期名,
-            func.count(入退室_出席記録.記録ID).label('absent_count')  # 欠席数をカウント
+            func.count(入退室_出席記録.記録ID).label('absent_count')
         ).join(学科, 学生マスタ.学科ID == 学科.学科ID) \
          .join(期マスタ, 学生マスタ.期 == 期マスタ.期ID) \
          .outerjoin(入退室_出席記録, and_(
@@ -508,11 +575,14 @@ def index_page():
         return render_template('index.html', 
                                students=students_with_info, 
                                current_class=current_class_name, 
-                               current_class_id=current_class_id)
+                               current_class_id=current_class_id, 
+                               departments=db.session.query(学科).all(), 
+                               terms=db.session.query(期マスタ).all())
         
     except Exception as e:
         app.logger.error(f"データベースクエリ実行中にエラーが発生しました: {e}")
         return "データベースクエリ実行中にエラーが発生しました。", 500
+
 
 @app.route('/absent-check')
 def absent_check_page():
@@ -726,6 +796,7 @@ if __name__ == "__main__":
 else:
     # Gunicorn/Renderで起動した場合: 初期化は既に完了しているので、何もしない
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
