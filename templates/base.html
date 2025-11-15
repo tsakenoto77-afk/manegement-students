@@ -40,9 +40,12 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('manual_entry_page') }}"><i class="fas fa-edit me-1"></i>手動入退室記録</a>
                     </li>
-                    <!-- ここに新しいリンクを追加 -->
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('attendance_rate_page') }}"><i class="fas fa-chart-line me-1"></i>出席率</a>
+                    </li>
+                    <!-- ここに新しいリンクを追加 -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('student_attendance_rate_page') }}"><i class="fas fa-user-graduate me-1"></i>学生別出席率</a>
                     </li>
                 </ul>
             </div>
@@ -57,4 +60,5 @@
     {% block scripts %}{% endblock %}
 </body>
 </html>
+
 
