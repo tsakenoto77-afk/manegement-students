@@ -1,27 +1,59 @@
-<h2 class="section-title mt-5"><i class="fas fa-users me-2"></i>現在の学生一覧 ({{ current_class }})</h2>
-<div class="card p-4 mb-4">
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th scope="col">学生番号</th>
-                <th scope="col">氏名</th>
-                <th scope="col">学科</th>
-            </tr>
-        </thead>
-        <tbody>
-            {# Pythonコードから渡された 'students' リストをループ処理する #}
-            {% for student in students %}
-            <tr>
-                {# student[0]: 学生番号, student[1]: 生徒名, student[2]: 学科名 #}
-                <td>{{ student[0] }}</td>
-                <td>{{ student[1] }}</td>
-                <td>{{ student[2] }}</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="3" class="text-center text-muted">この学科には学生データが登録されていません。</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<!-- templates/index.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="section-title mt-5"><i class="fas fa-users me-2"></i>現在の学生一覧 ({{ current_class }})</h2>
+    
+    <!-- 欠席判定トリガーボタン -->
+    <div class="mb-3">
+        <button id="trigger-check" class="btn btn-warning">自動欠席判定を実行</button>
+        <a href="{{ url_for('absent_check_page') }}" class="btn btn-info">欠席確認ページへ</a>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th scope="col">学生番号</th>
+                    <th scope="col">氏名</th>
+                    <th scope="col">学科</th>
+                    <th scope="col">欠席数</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr {% if student[4] > 0 %}class="table-danger"{% endif %}>
+                    <td>{{ student[0] }}</td>
+                    <td>{{ student[1] }}</td>
+                    <td>{{ student[2] }}</td>
+                    <td>
+                        {% if student[4] > 0 %}
+                            <span class="badge bg-danger">{{ student[4] }}</span>
+                        {% else %}
+                            0
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted">この学科には学生データが登録されていません。</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
+<script>
+    // 自動欠席判定トリガー
+    document.getElementById('trigger-check').addEventListener('click', function() {
+        fetch('/trigger-absent-check', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message || data.error);
+                location.reload();  // ページリロードで更新
+            });
+    });
+</script>
+{% endblock %}
