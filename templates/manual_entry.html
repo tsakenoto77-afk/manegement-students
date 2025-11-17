@@ -53,4 +53,13 @@
         <button type="submit" class="btn btn-primary">記録追加</button>
     </form>
 </div>
+// {% block scripts %}
+<script>
+    $(document).ready(function() {
+        $('#student_no').select2({
+            placeholder: '学籍番号または氏名で検索',
+            allowClear: true
+        });
+    });
+</script>
 {% endblock %}
