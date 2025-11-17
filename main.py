@@ -129,13 +129,13 @@ class 週時間割(db.Model):
 class 入退室_出席記録(db.Model):
     __tablename__ = '入退室_出席記録'
     記録ID = db.Column(db.Integer, primary_key=True)
-    学生番号 = db.Column(db.Integer, db.ForeignKey('学生マスタ.学籍番号'), nullable=False, index=True)  # インデックス追加
-    入室日時 = db.Column(db.DateTime, nullable=True)
+    学生番号 = db.Column(db.Integer, db.ForeignKey('学生マスタ.学籍番号'), nullable=False, index=True)
+    入室日時 = db.Column(db.DateTime, nullable=True)  # nullable=True に変更
     退室日時 = db.Column(db.DateTime, nullable=True)
-    記録日 = db.Column(db.Date, nullable=False, index=True)  # インデックス追加
-    ステータス = db.Column(db.String(10), nullable=False)  # '出席', '遅刻', '欠席', '早退', '未定'
+    記録日 = db.Column(db.Date, nullable=False, index=True)
+    ステータス = db.Column(db.String(10), nullable=False)
     授業科目ID = db.Column(db.SmallInteger, db.ForeignKey('授業科目.授業科目ID'), nullable=True)
-    週時間割ID = db.Column(db.String(50), nullable=True)  # 便宜的な参照キー (年度-学科ID-期-曜日-時限)
+    週時間割ID = db.Column(db.String(50), nullable=True)
     備考 = db.Column(db.Text)
 
     学生 = db.relationship('学生マスタ', backref=db.backref('出席記録', lazy=True))
@@ -266,7 +266,7 @@ def auto_absent_check():
                     week_schedule_id = f"{schedule.年度}-{schedule.学科ID}-{schedule.期}-{schedule.曜日}-{schedule.時限}"
                     new_absent_record = 入退室_出席記録(
                         学生番号=student.学籍番号,
-                        入室日時=None,  # ここでNULLを指定しているが、モデルが許容しない。
+                        # 入室日時=None,  # 削除（nullable=Trueなら不要）
                         退室日時=None,
                         記録日=today,
                         ステータス='欠席',
@@ -782,7 +782,7 @@ def student_management_page():
 def logs_page():
     try:
         logs = db.session.query(入退室_出席記録).order_by(入退室_出席記録.記録ID).all()
-        # delete_url = url_for('delete_all_records')  # コメントアウトまたは削除
+        # delete_url = url_for('delete_all_records')  # 削除
         return render_template('logs.html', logs=logs)  # delete_url=delete_url を削除
     except Exception as e:
         app.logger.error(f"全ログクエリ実行中にエラーが発生しました: {e}")
@@ -1108,6 +1108,7 @@ else:
         db.create_all()  # テーブル作成
         insert_initial_data()  # 初期データ挿入
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
