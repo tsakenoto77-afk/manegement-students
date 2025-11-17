@@ -782,8 +782,8 @@ def student_management_page():
 def logs_page():
     try:
         logs = db.session.query(入退室_出席記録).order_by(入退室_出席記録.記録ID).all()
-        # 削除: url_for('delete_all_records') 関連の行
-        return render_template('logs.html', logs=logs)
+        # delete_url = url_for('delete_all_records')  # コメントアウトまたは削除
+        return render_template('logs.html', logs=logs)  # delete_url=delete_url を削除
     except Exception as e:
         app.logger.error(f"全ログクエリ実行中にエラーが発生しました: {e}")
         return "全ログの取得中にエラーが発生しました。", 500
@@ -1108,5 +1108,6 @@ else:
         db.create_all()  # テーブル作成
         insert_initial_data()  # 初期データ挿入
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
