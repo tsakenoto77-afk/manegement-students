@@ -130,7 +130,7 @@ class 入退室_出席記録(db.Model):
     __tablename__ = '入退室_出席記録'
     記録ID = db.Column(db.Integer, primary_key=True)
     学生番号 = db.Column(db.Integer, db.ForeignKey('学生マスタ.学籍番号'), nullable=False, index=True)  # インデックス追加
-    入室日時 = db.Column(db.DateTime, nullable=False)
+    入室日時 = db.Column(db.DateTime, nullable=True)
     退室日時 = db.Column(db.DateTime, nullable=True)
     記録日 = db.Column(db.Date, nullable=False, index=True)  # インデックス追加
     ステータス = db.Column(db.String(10), nullable=False)  # '出席', '遅刻', '欠席', '早退', '未定'
@@ -266,7 +266,7 @@ def auto_absent_check():
                     week_schedule_id = f"{schedule.年度}-{schedule.学科ID}-{schedule.期}-{schedule.曜日}-{schedule.時限}"
                     new_absent_record = 入退室_出席記録(
                         学生番号=student.学籍番号,
-                        入室日時=None,  # 入室なし
+                        # 入室日時=None,  # 削除またはコメントアウト
                         退室日時=None,
                         記録日=today,
                         ステータス='欠席',
@@ -1109,7 +1109,3 @@ else:
         db.create_all()  # テーブル作成
         insert_initial_data()  # 初期データ挿入
     app.logger.info("Render/Gunicorn環境で起動しました。")
-
-
-
-
