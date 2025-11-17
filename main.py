@@ -266,7 +266,7 @@ def auto_absent_check():
                     week_schedule_id = f"{schedule.年度}-{schedule.学科ID}-{schedule.期}-{schedule.曜日}-{schedule.時限}"
                     new_absent_record = 入退室_出席記録(
                         学生番号=student.学籍番号,
-                        # 入室日時=None,  # 削除またはコメントアウト
+                        入室日時=None,  # ここでNULLを指定しているが、モデルが許容しない。
                         退室日時=None,
                         記録日=today,
                         ステータス='欠席',
@@ -1109,3 +1109,4 @@ else:
         db.create_all()  # テーブル作成
         insert_initial_data()  # 初期データ挿入
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
