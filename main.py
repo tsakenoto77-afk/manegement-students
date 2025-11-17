@@ -780,10 +780,9 @@ def student_management_page():
 
 @app.route('/logs')
 def logs_page():
-    """全ログページ: 入退室記録の全ログを表示"""
     try:
-        # 例: 全入退室記録を取得
         logs = db.session.query(入退室_出席記録).order_by(入退室_出席記録.記録ID).all()
+        # 削除: url_for('delete_all_records') 関連の行
         return render_template('logs.html', logs=logs)
     except Exception as e:
         app.logger.error(f"全ログクエリ実行中にエラーが発生しました: {e}")
@@ -1109,4 +1108,5 @@ else:
         db.create_all()  # テーブル作成
         insert_initial_data()  # 初期データ挿入
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
