@@ -534,6 +534,9 @@ def insert_initial_data(term=3):
 # =========================================================================
 # データベース初期化ロジック (変更: 自動欠席判定を追加)
 # =========================================================================
+# =========================================================================
+# データベース初期化ロジック (変更: マイグレーション自動適用を追加)
+# =========================================================================
 with app.app_context():
     try:
         db.session.query(学生マスタ).first()
@@ -544,6 +547,14 @@ with app.app_context():
         term = int(os.environ.get('STUDENT_TERM', 3))
         insert_initial_data(term)
         app.logger.info("? データベースの初期化とマスタデータの上書きが完了しました。")
+
+    # マイグレーション適用（追加: 保留中のマイグレーションを自動適用）
+    try:
+        from flask_migrate import upgrade
+        upgrade()  # データベーススキーマを最新に更新
+        app.logger.info("マイグレーションが正常に適用されました。")
+    except Exception as e:
+        app.logger.error(f"マイグレーション適用中にエラー: {e}")
 
     # アプリ起動時に自動欠席判定を実行 (テスト用。本番ではスケジューラー推奨)
     auto_absent_check()
@@ -1110,6 +1121,7 @@ else:
         db.create_all()  # テーブル作成
         insert_initial_data()  # 初期データ挿入
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
