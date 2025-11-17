@@ -4,6 +4,7 @@ import os
 from datetime import datetime, date, timedelta, time
 from flask import Flask, render_template, request, url_for, jsonify, redirect, cli
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from sqlalchemy import func, Index, and_, case
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 import click
@@ -35,6 +36,7 @@ def load_user(user_id):
     return Teacher(teacher) if teacher else None
 
 db = SQLAlchemy(app)
+migrate = Migrate(app, db) # 追加
 
 # =========================================================================
 # 出席判定に関する定数
@@ -1108,6 +1110,7 @@ else:
         db.create_all()  # テーブル作成
         insert_initial_data()  # 初期データ挿入
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
 
 
 
