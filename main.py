@@ -790,6 +790,34 @@ def logs_page():
     except Exception as e:
         app.logger.error(f"全ログクエリ実行中にエラーが発生しました: {e}")
         return "全ログの取得中にエラーが発生しました。", 500
+# =========================================================================
+# 新機能: RasPi500受信ログ閲覧ページ (新規)
+# =========================================================================
+
+@app.route('/raspi_logs')
+def raspi_logs_page():
+    """RasPi500から受信した記録のみを表示する専用ページ"""
+    try:
+        # RasPi500受信記録のみ取得 (備考='RasPi500自動受信')
+        raspi_logs = db.session.query(
+            入退室_出席記録.記録ID,
+            入退室_出席記録.学生番号,
+            学生マスタ.氏名,
+            入退室_出席記録.入室日時,
+            入退室_出席記録.退室日時,
+            入退室_出席記録.記録日,
+            入退室_出席記録.ステータス,
+            授業科目.授業科目名,
+            入退室_出席記録.備考
+        ).join(学生マスタ, 入退室_出席記録.学生番号 == 学生マスタ.学籍番号) \
+         .join(授業科目, 入退室_出席記録.授業科目ID == 授業科目.授業科目ID) \
+         .filter(入退室_出席記録.備考 == 'RasPi500自動受信') \
+         .order_by(入退室_出席記録.記録ID.desc()).all()  # 新しい順
+
+        return render_template('raspi_logs.html', raspi_logs=raspi_logs)
+    except Exception as e:
+        app.logger.error(f"RasPi500ログクエリ実行中にエラーが発生しました: {e}")
+        return "RasPi500ログの取得中にエラーが発生しました。", 500
 
 @app.route('/timetable')
 def timetable_page():
@@ -1111,3 +1139,4 @@ else:
         db.create_all()  # テーブル作成
         insert_initial_data()  # 初期データ挿入
     app.logger.info("Render/Gunicorn環境で起動しました。")
+
