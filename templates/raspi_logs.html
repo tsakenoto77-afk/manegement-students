@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RasPi500受信ログ</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .status-attendance { color: green; }
+        .status-late { color: orange; }
+        .status-absent { color: red; }
+    </style>
+</head>
+<body>
+    <h1>RasPi500受信ログ</h1>
+    <p>RasPi500から自動受信した入退室・出席記録の一覧です。</p>
+    <table>
+        <thead>
+            <tr>
+                <th>記録ID</th>
+                <th>学籍番号</th>
+                <th>氏名</th>
+                <th>入室日時</th>
+                <th>退室日時</th>
+                <th>記録日</th>
+                <th>ステータス</th>
+                <th>授業科目</th>
+                <th>備考</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in raspi_logs %}
+            <tr>
+                <td>{{ log.記録ID }}</td>
+                <td>{{ log.学生番号 }}</td>
+                <td>{{ log.氏名 }}</td>
+                <td>{{ log.入室日時 if log.入室日時 else '-' }}</td>
+                <td>{{ log.退室日時 if log.退室日時 else '-' }}</td>
+                <td>{{ log.記録日 }}</td>
+                <td class="{% if log.ステータス == '出席' %}status-attendance{% elif log.ステータス == '遅刻' %}status-late{% else %}status-absent{% endif %}">{{ log.ステータス }}</td>
+                <td>{{ log.授業科目名 }}</td>
+                <td>{{ log.備考 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if not raspi_logs %}
+    <p>受信記録がありません。</p>
+    {% endif %}
+</body>
+</html>
